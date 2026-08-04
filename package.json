@@ -1,0 +1,43 @@
+{
+  "name": "prettier-plugin-pascal",
+  "version": "0.0.1",
+  "description": "A modern, opinionated Prettier plugin that automatically formats Pascal code—including Delphi, Object Pascal, Free Pascal, and Lazarus—with fast, consistent, and reliable styling for a seamless development experience.",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "files": [
+    "dist",
+    "src/tree-sitter-pascal.wasm"
+  ],
+  "scripts": {
+    "build": "tsc && npm run copy-wasm",
+    "copy-wasm": "copyfiles -u 1 src/tree-sitter-pascal.wasm dist",
+    "prepublishOnly": "npm run build",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "prettier",
+    "prettier-plugin",
+    "formatter",
+    "code-formatter",
+    "pascal",
+    "object-pascal",
+    "delphi",
+    "freepascal",
+    "fpc",
+    "lazarus",
+    "source-code",
+    "code-style",
+    "formatting",
+    "developer-tools"
+  ],
+  "author": "Rio Sanjaya",
+  "license": "Apache-2.0",
+  "devDependencies": {
+    "@types/node": "^26.1.2",
+    "copyfiles": "^2.4.1",
+    "prettier": "^3.9.6"
+  },
+  "dependencies": {
+    "web-tree-sitter": "^0.26.11"
+  }
+}
