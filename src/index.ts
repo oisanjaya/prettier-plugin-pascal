@@ -8,9 +8,6 @@
 // pp = "Preprocessor compiler directives (e.g., {$IFDEF}, {$ELSE}, {$ENDIF})"
 
 // [statements_and_control_flow]
-// repeat = "repeat ... until loop statements"
-// for = "for ... to/downto ... do loop statements"
-// foreach = "for ... in ... do loop statements"
 // case = "case ... of ... end branching statements"
 // caseCase = "Individual branch clauses inside a case statement"
 // caseLabel = "Label list preceding ':' in case clauses and variant records"
@@ -74,7 +71,6 @@
 // recInitializerField = "Individual field-value assignment in a record initializer"
 // arrInitializer = "Array literal initializers ((Val1, Val2, Val3))"
 
-
 import { Parser } from "web-tree-sitter";
 import { loadPascalParser } from "./treeSitterLoader";
 
@@ -88,7 +84,7 @@ import prettier, {
 } from "prettier";
 import { builders } from "prettier/doc";
 
-const { group, join, line, hardline, softline, indent, breakParent, fill } =
+const { group, join, line, hardline, softline, indent, breakParent, fill, align } =
   prettier.doc.builders;
 
 const { printDocToString } = prettier.doc.printer;
@@ -123,6 +119,22 @@ export const parsers: Parsers = {
       if (tree === null) {
         throw new Error("Failed to parse Pascal code – tree is null");
       }
+
+      if (process.env.DEBUG_PASCAL_PARSER) {
+        function debugPrintNode(node: any, indent = 0, fieldName = "") {
+          const fieldNameStr =
+            fieldName?.length > 0 ? "(" + fieldName + ")" : "";
+          console.log(
+            `${" ".repeat(indent)}${node.type}${fieldNameStr} [${node.startPosition.row}:${node.startPosition.column}] - [${node.endPosition.row}:${node.endPosition.column}]`,
+          );
+          for (let i = 0; i < node.childCount; i++) {
+            const childFiledName = node.fieldNameForChild(i);
+            debugPrintNode(node.child(i), indent + 2, childFiledName);
+          }
+        }
+        debugPrintNode(tree.rootNode);
+      }
+
       return tree.rootNode;
     },
     astFormat: "pascal",
@@ -400,7 +412,7 @@ export function printNode(
     case "root":
       return withSkippedNodes([], () => {
         const retDoc = [path.map(printFn, "children"), line];
-        // console.log({ retDoc: JSON.stringify(retDoc) });
+        // console.log( JSON.stringify(retDoc) );
         return retDoc;
       });
 
@@ -745,13 +757,13 @@ export function printNode(
         "var ",
       ];
 
-      const body = withSkippedNodes(["kClass", "kVar", "kThreadvar"], () =>
-        path
-          .map(printFn, "children")
-          .map((child) => (child === "" ? child : [group(child), hardline])),
+      const body = withSkippedNodes(
+        ["kClass", "kVar", "kThreadvar"],
+        () => path.map(printFn, "children"),
+        // .map((child) => (child === "" ? child : [group(child), hardline]))
       );
 
-      return [header, indent([hardline, ...body])];
+      return [header, indent([join(line, body)])];
     }
 
     case "declType": {
@@ -780,6 +792,10 @@ export function printNode(
       );
       const type = filterThenCallPrint(path, printFn, node, "", "type")[0];
       const procAttribute = printTrailingAttributes(path, printFn, node);
+      const typeString = printDocToString(type, {
+        printWidth: 800,
+        tabWidth: 2,
+      });
 
       return group([
         rttiAttribute,
@@ -1082,39 +1098,6 @@ export function printNode(
     }
 
     // ================== EXPRESSION ===================
-    case "assignment": {
-      const lValue: Doc[] = [];
-      const rValue: Doc[] = [];
-      let idx = 0;
-
-      const assignOps = new Set([
-        "kAssign",
-        "kAssignAdd",
-        "kAssignSub",
-        "kAssignMul",
-        "kAssignDiv",
-      ]);
-      for (idx = 0; idx < node.childCount; idx++) {
-        if (assignOps.has(node.children[idx].type)) {
-          lValue.push([line, node.children[idx].text]);
-          rValue.push(line);
-          break;
-        } else {
-          withSkippedNodes([], () =>
-            lValue.push(path.call(printFn, "children", idx)),
-          );
-        }
-      }
-
-      for (idx = idx + 1; idx < node.childCount; idx++) {
-        withSkippedNodes([], () =>
-          rValue.push(path.call(printFn, "children", idx)),
-        );
-      }
-
-      return indent(group([lValue, indent(group(rValue))]));
-    }
-
     case "exprBinary":
       return withSkippedNodes([], () =>
         fill([
@@ -1164,6 +1147,49 @@ export function printNode(
     }
 
     // ================== STATEMENTS ===================
+    case "assignment": {
+      const lValue: Doc[] = [];
+      const rValue: Doc[] = [];
+      let idx = 0;
+
+      const assignOps = new Set([
+        "kAssign",
+        "kAssignAdd",
+        "kAssignSub",
+        "kAssignMul",
+        "kAssignDiv",
+      ]);
+      for (idx = 0; idx < node.childCount; idx++) {
+        if (assignOps.has(node.children[idx].type)) {
+          lValue.push([line, node.children[idx].text]);
+          rValue.push(line);
+          break;
+        } else {
+          withSkippedNodes([], () =>
+            lValue.push(path.call(printFn, "children", idx)),
+          );
+        }
+      }
+
+      for (idx = idx + 1; idx < node.childCount; idx++) {
+        withSkippedNodes([], () =>
+          rValue.push(path.call(printFn, "children", idx)),
+        );
+      }
+
+      return indent(group([lValue, indent(group(rValue))]));
+    }
+
+    case "statements": {
+      return [
+        join(
+          [";", line],
+          filterThenCallPrint(path, printFn, node, "", "", [";"]),
+        ),
+        "; ",
+      ];
+    }
+
     case "ifElse":
     case "if": {
       const condition = filterThenCallPrint(
@@ -1179,14 +1205,11 @@ export function printNode(
       const elseFieldGroup =
         elseField.length > 0 ? [line, "else", indent([line, elseField])] : "";
 
-      return group(
-        [
-          group(["if", indent([line, fill(condition), line, "then"])]),
-          indent([line, thenField]),
-          elseFieldGroup,
-        ],
-        { shouldBreak: false },
-      );
+      return group([
+        group(["if", indent([line, fill(condition), line, "then"])]),
+        indent([line, thenField]),
+        elseFieldGroup,
+      ]);
     }
 
     case "while": {
@@ -1210,6 +1233,204 @@ export function printNode(
         group(["while", indent([line, fill(condition), line, "do"])]),
         indent([line, body]),
       ]);
+    }
+
+    case "repeat": {
+      const condition = filterThenCallPrint(
+        path,
+        printFn,
+        node,
+        "",
+        "condition",
+      );
+
+      const conditionNodes = filterChildrenTypeField(node, "", "condition");
+      const idxAfterCondition = conditionNodes[conditionNodes.length + 1] ?? -1;
+
+      const body = withSkippedNodes(
+        [],
+        () =>
+          filterChildrenTypeField(node, "", "body").map((idx) => {
+            return path.call(printFn, "children", idx);
+          })[0] ?? "",
+      );
+
+      const afterCondition = [];
+      for (let i = idxAfterCondition; i < node.childCount; i++) {
+        afterCondition.push(path.call(printFn, "children", i));
+      }
+
+      return group([
+        group([
+          "repeat",
+          indent(group([line, body])),
+          [softline, "until"],
+          group([indent([line, condition])]),
+        ]),
+      ]);
+    }
+
+    case "for": {
+      const start = filterThenCallPrint(path, printFn, node, "", "start");
+
+      const end = filterThenCallPrint(path, printFn, node, "", "end");
+
+      const body = withSkippedNodes(
+        [],
+        () =>
+          filterChildrenTypeField(node, "", "body").map((idx) =>
+            path.call(printFn, "children", idx),
+          )[0] ?? "",
+      );
+
+      const kNodes = fetchTextByType(path, printFn, node, [
+        "kTo",
+        "kDownTo",
+        "kDo",
+      ]);
+
+      return [
+        group([
+          "for",
+          line,
+          start,
+          line,
+          kNodes.has("kTo") ? "to" : kNodes.has("kDownTo") ? "downto" : "",
+          line,
+          end,
+          line,
+          kNodes.has("kDo") ? "do" : "",
+        ]),
+        indent(group([line, body])),
+      ];
+    }
+
+    case "foreach": {
+      const iterator = filterThenCallPrint(path, printFn, node, "", "iterator");
+
+      const iterable = filterThenCallPrint(path, printFn, node, "", "iterable");
+
+      const body = withSkippedNodes(
+        [],
+        () =>
+          filterChildrenTypeField(node, "", "body").map((idx) =>
+            path.call(printFn, "children", idx),
+          )[0] ?? "",
+      );
+
+      const kNodes = fetchTextByType(path, printFn, node, ["kIn", "kDo"]);
+
+      return [
+        group([
+          "for",
+          line,
+          iterator,
+          line,
+          kNodes.has("kIn") ? "in" : "",
+          line,
+          iterable,
+          line,
+          kNodes.has("kDo") ? "do" : "",
+        ]),
+        indent(group([line, body])),
+      ];
+    }
+
+    case "case":
+    case "caseTr": {
+      const kOfIdx = filterChildrenTypeField(node, "kOf")[0] ?? -1;
+      const kElseIdx = filterChildrenTypeField(node, "kElse")[0] ?? -1;
+      const kEndIdx =
+        filterChildrenTypeField(node, "kEnd")[0] ?? node.childCount;
+
+      const exprDocs: Doc[] = [];
+      const exprEnd = kOfIdx !== -1 ? kOfIdx : node.childCount;
+      for (let i = 0; i < exprEnd; i++) {
+        const child = node.children[i];
+        if (child.type === "kCase" || child.type === "comment") continue;
+        withSkippedNodes([], () =>
+          exprDocs.push(path.call(printFn, "children", i)),
+        );
+      }
+
+      const caseClauses: Doc[] = [];
+      const clausesEnd = kElseIdx !== -1 ? kElseIdx : kEndIdx;
+      for (let i = kOfIdx + 1; i < clausesEnd; i++) {
+        const child = node.children[i];
+        if (child.type === "caseCase" || child.type === "caseCaseTr") {
+          withSkippedNodes([], () =>
+            caseClauses.push(path.call(printFn, "children", i)),
+          );
+        }
+      }
+
+      const elseDocs: Doc[] = [];
+      if (kElseIdx !== -1) {
+        for (let i = kElseIdx + 1; i < kEndIdx; i++) {
+          const child = node.children[i];
+          if (child.type === ":" || child.type === ";") continue;
+          withSkippedNodes([], () => {
+            const stmt = path.call(printFn, "children", i);
+            if (stmt !== "") {
+              if (child.type === "comment") {
+                elseDocs.push(stmt);
+              } else {
+                const stmtStr = printDocToString(stmt, {
+                  printWidth: 800,
+                  tabWidth: 2,
+                });
+                elseDocs.push([
+                  stmt,
+                  stmtStr.formatted.endsWith(";") ? "" : ";",
+                ]);
+              }
+            }
+          });
+        }
+      }
+
+      const headerDoc = group(["case ", fill(exprDocs), " of"]);
+
+      const elseSection =
+        kElseIdx !== -1
+          ? [hardline, "else", indent([hardline, join(hardline, elseDocs)])]
+          : "";
+
+      return group([
+        headerDoc,
+        indent([hardline, join([";", hardline], caseClauses)]),
+        elseSection,
+        hardline,
+        "end",
+      ]);
+    }
+
+    case "caseCase":
+    case "caseCaseTr": {
+      
+      const label =
+        filterThenCallPrint(path, printFn, node, "caseLabel", "label")[0] ?? "";
+      const body =
+        filterThenCallPrint(path, printFn, node, "", "body")[0] ?? "";
+
+      return group([label, indent([line, body])]);
+    }
+
+    case "caseLabel": {
+      // Handles label lists preceding the colon: "1, 2, 5..10:"
+      const items = filterThenCallPrint(path, printFn, node, "", "", [
+        ",",
+        ":",
+      ]);
+
+      return group([join([",", line], items), ":"]);
+    }
+
+    case "range": {
+      // Handles subrange syntax inside labels or types: "1..10" or "'a'..'z'"
+      return withSkippedNodes([".."], () =>
+        join("..", path.map(printFn, "children")),
+      );
     }
 
     // ===================== BLOCK =====================
