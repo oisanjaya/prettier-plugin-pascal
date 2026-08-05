@@ -1349,9 +1349,15 @@ export function printNode(
     case "case":
     case "caseTr": {
       const kOfIdx = filterChildrenTypeField(node, "kOf")[0] ?? -1;
-      const kElseIdx = filterChildrenTypeField(node, "kElse")[0] ?? -1;
+      const kOtherwiseIdx = filterChildrenTypeField(node, "kOtherwise")[0] ?? -1;
+      const kElseIdx =
+        filterChildrenTypeField(node, "kElse")[0] ??
+        (kOtherwiseIdx >= 0 ? kOtherwiseIdx : -1);
       const kEndIdx =
         filterChildrenTypeField(node, "kEnd")[0] ?? node.childCount;
+
+      console.log({ kOtherwiseIdx });
+      console.log({ kElseIdx });
 
       const exprDocs: Doc[] = [];
       const exprEnd = kOfIdx !== -1 ? kOfIdx : node.childCount;
@@ -1403,7 +1409,11 @@ export function printNode(
 
       const elseSection =
         kElseIdx !== -1
-          ? [hardline, "else", indent([hardline, join(hardline, elseDocs)])]
+          ? [
+              hardline,
+              kOtherwiseIdx !== -1 ? "otherwise" : "else",
+              indent([hardline, join(hardline, elseDocs)]),
+            ]
           : "";
 
       return group([
