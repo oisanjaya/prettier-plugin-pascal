@@ -8,9 +8,6 @@
 // pp = "Preprocessor compiler directives (e.g., {$IFDEF}, {$ELSE}, {$ENDIF})"
 
 // [statements_and_control_flow]
-// case = "case ... of ... end branching statements"
-// caseCase = "Individual branch clauses inside a case statement"
-// caseLabel = "Label list preceding ':' in case clauses and variant records"
 // try = "try ... except/finally ... end exception blocks"
 // exceptionHandler = "on E: Exception do ... clauses inside except blocks"
 // exceptionElse = "The else block inside a try ... except handler"
@@ -84,8 +81,17 @@ import prettier, {
 } from "prettier";
 import { builders } from "prettier/doc";
 
-const { group, join, line, hardline, softline, indent, breakParent, fill, align } =
-  prettier.doc.builders;
+const {
+  group,
+  join,
+  line,
+  hardline,
+  softline,
+  indent,
+  breakParent,
+  fill,
+  align,
+} = prettier.doc.builders;
 
 const { printDocToString } = prettier.doc.printer;
 
@@ -412,7 +418,7 @@ export function printNode(
     case "root":
       return withSkippedNodes([], () => {
         const retDoc = [path.map(printFn, "children"), line];
-        // console.log( JSON.stringify(retDoc) );
+        // console.log(JSON.stringify(retDoc));
         return retDoc;
       });
 
@@ -1285,7 +1291,7 @@ export function printNode(
 
       const kNodes = fetchTextByType(path, printFn, node, [
         "kTo",
-        "kDownTo",
+        "kDownto",
         "kDo",
       ]);
 
@@ -1295,11 +1301,15 @@ export function printNode(
           line,
           start,
           line,
-          kNodes.has("kTo") ? "to" : kNodes.has("kDownTo") ? "downto" : "",
+          (kNodes.get("kTo") as string).length > 0
+            ? "to"
+            : (kNodes.get("kDownto") as string).length > 0
+              ? "downto"
+              : "",
           line,
           end,
           line,
-          kNodes.has("kDo") ? "do" : "",
+          (kNodes.get("kDo") as string).length > 0 ? "do" : "",
         ]),
         indent(group([line, body])),
       ];
@@ -1407,7 +1417,6 @@ export function printNode(
 
     case "caseCase":
     case "caseCaseTr": {
-      
       const label =
         filterThenCallPrint(path, printFn, node, "caseLabel", "label")[0] ?? "";
       const body =
@@ -1431,6 +1440,73 @@ export function printNode(
       return withSkippedNodes([".."], () =>
         join("..", path.map(printFn, "children")),
       );
+    }
+
+    case "exceptionHandler": {
+      // return "===exceptionHandler";
+      const variable =
+        filterThenCallPrint(path, printFn, node, "", "variable") ?? "";
+      const exception =
+        filterThenCallPrint(path, printFn, node, "", "exception") ?? "";
+      const body = filterThenCallPrint(path, printFn, node, "", "body") ?? "";
+
+      return group([
+        group(["on", line, group([variable, exception]), line, "do"]),
+        indent(group([line, body])),
+      ]);
+    }
+
+    case "try": {
+      const tryBuilder: Doc[] = ["try"];
+      const kNodes = fetchTextByType(path, printFn, node, [
+        "kExcept",
+        "kFinally",
+        "kDo",
+      ]);
+
+      tryBuilder.push(
+        group([
+          indent([line, filterThenCallPrint(path, printFn, node, "", "try")]),
+        ]),
+      );
+
+      if ((kNodes.get("kExcept") as string).length > 0) {
+        tryBuilder.push(
+          line,
+          "except",
+          group([
+            indent([
+              line,
+              join(
+                line,
+                filterThenCallPrint(path, printFn, node, "exceptionHandler"),
+              ),
+            ]),
+          ]),
+        );
+      }
+
+      if ((kNodes.get("kFinally") as string).length > 0) {
+        tryBuilder.push(
+          line,
+          "finally",
+          group([
+            indent([
+              line,
+              filterThenCallPrint(
+                path,
+                printFn,
+                node,
+                "statements",
+                "finally",
+                ["kFinally"],
+              ),
+            ]),
+          ]),
+        );
+      }
+
+      return tryBuilder;
     }
 
     // ===================== BLOCK =====================
