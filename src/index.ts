@@ -4,12 +4,9 @@
 // # ==============================================================================
 
 // [top_level_and_preprocessor]
-// moduleName = "Dot-delimited module or unit name identifiers"
-// pp = "Preprocessor compiler directives (e.g., {$IFDEF}, {$ELSE}, {$ENDIF})"
 
 // [statements_and_control_flow]
 // try = "try ... except/finally ... end exception blocks"
-// exceptionHandler = "on E: Exception do ... clauses inside except blocks"
 // exceptionElse = "The else block inside a try ... except handler"
 // raise = "raise ...; exception triggering statements"
 // with = "with ... do statements"
@@ -229,11 +226,18 @@ function filterThenCallPrint(
 ): Doc[] {
   return withSkippedNodes(skipNodes, () =>
     filterChildrenTypeField(node, typeName, fieldName)
-      .map((idx) => path.call(print, "children", idx))
-      .filter(
-        (item) =>
-          typeof item === "object" || Array.isArray(item) || item.length > 0,
-      ),
+      .map((idx) => {
+        if (skipNodes.includes(node.children[idx].type)) {
+          return "";
+        }
+
+        return path.call(print, "children", idx);
+      })
+      .filter((item) => {
+        return (
+          typeof item === "object" || Array.isArray(item) || item.length > 0
+        );
+      }),
   );
 }
 
@@ -311,7 +315,7 @@ function printTrailingAttributes(
       }
     });
   }
-  return group(attrs);
+  return attrs;
 }
 
 /** Prints top-level modules (program / unit) */
@@ -418,11 +422,35 @@ export function printNode(
     case "root":
       return withSkippedNodes([], () => {
         const retDoc = [path.map(printFn, "children"), line];
-        // console.log(JSON.stringify(retDoc));
+
+        if (process.env.DEBUG_PASCAL_FINALDOC) {
+          console.log(JSON.stringify(retDoc));
+        }
+
         return retDoc;
       });
 
     // =================== TOP LEVEL ===================
+    case "pp": {
+      const text = node.text.trim();
+
+      // Test for structural block directives ({$IF...}, {$ELSE}, {$ENDIF}, {$DEFINE}, {$INCLUDE}, etc.)
+      // These must always render on their own line to prevent breaking Pascal syntax structures.
+      const isStructuralDirective =
+        /^\{\$\s*(if|ifdef|ifndef|else|elseif|endif|define|undef|include|i\s)/i.test(
+          text,
+        );
+
+      if (isStructuralDirective) {
+        // Mirrors the 'comment' pattern: allows a clean break before and forces a newline after
+        return group([line, text, hardline]);
+      }
+
+      // For short inline compiler toggles/switches (e.g., {$I+}, {$R-}, {$Q+}),
+      // allow them to sit inline if there is space, or wrap cleanly if the line overflows.
+      return group([line, text]);
+    }
+
     case "program":
       return printModule(path, printFn, node, "program");
 
@@ -453,10 +481,6 @@ export function printNode(
     case "defProc": {
       const header =
         filterThenCallPrint(path, printFn, node, "", "header")[0] ?? "";
-      const headerString = printDocToString(header, {
-        printWidth: 800,
-        tabWidth: 2,
-      });
 
       const local = withSkippedNodes(
         [],
@@ -476,7 +500,6 @@ export function printNode(
 
       return group([
         header,
-        !headerString.formatted.endsWith(";") ? ";" : "",
         indent([local && (local as Doc[]).length > 0 ? hardline : "", local]),
         indent([hardline, body]),
         ";",
@@ -763,13 +786,11 @@ export function printNode(
         "var ",
       ];
 
-      const body = withSkippedNodes(
-        ["kClass", "kVar", "kThreadvar"],
-        () => path.map(printFn, "children"),
-        // .map((child) => (child === "" ? child : [group(child), hardline]))
+      const body = withSkippedNodes(["kClass", "kVar", "kThreadvar"], () =>
+        path.map(printFn, "children"),
       );
 
-      return [header, indent([join(line, body)])];
+      return [header, indent([join(line, body)]), hardline];
     }
 
     case "declType": {
@@ -810,7 +831,7 @@ export function printNode(
         line,
         type,
         ";",
-        line,
+        (procAttribute as String).length !== 0 ? line : "",
         procAttribute,
       ]);
     }
@@ -825,12 +846,26 @@ export function printNode(
         "kFunction",
         "kConstructor",
         "kDestructor",
+        "kOperator",
       ]);
-
       const args =
         filterChildrenTypeField(node, "declArgs").length > 0
           ? filterThenCallPrint(path, printFn, node, "declArgs")
           : "";
+      const resultName =
+        filterChildrenTypeField(node, "", "resultName").length > 0
+          ? filterThenCallPrint(path, printFn, node, "", "resultName")
+          : "";
+      const type =
+        filterChildrenTypeField(node, "", "type").length > 0
+          ? filterThenCallPrint(path, printFn, node, "", "type")
+          : "";
+      const assign =
+        filterChildrenTypeField(node, "", "assign").length > 0
+          ? filterThenCallPrint(path, printFn, node, "", "assign")
+          : "";
+
+      const procAttribute = printTrailingAttributes(path, printFn, node);
 
       return [
         rttiAttribute,
@@ -846,9 +881,18 @@ export function printNode(
         kNodes.get("kFunction")?.toString().toLowerCase() ?? "",
         kNodes.get("kConstructor")?.toString().toLowerCase() ?? "",
         kNodes.get("kDestructor")?.toString().toLowerCase() ?? "",
+        kNodes.get("kOperator")?.toString().toLowerCase() ?? "",
         group([line, name]),
         indent(group(args)),
+        resultName !== "" ? line : "",
+        resultName,
+        type !== "" ? group([":", line]) : "",
+        type,
+        assign !== "" ? group([line, join(line, assign)]) : "",
         ";",
+        (procAttribute as String).length !== 0
+          ? group([line, procAttribute])
+          : "",
       ];
     }
 
@@ -1187,13 +1231,7 @@ export function printNode(
     }
 
     case "statements": {
-      return [
-        join(
-          [";", line],
-          filterThenCallPrint(path, printFn, node, "", "", [";"]),
-        ),
-        "; ",
-      ];
+      return [join([line], filterThenCallPrint(path, printFn, node, "", ""))];
     }
 
     case "ifElse":
@@ -1349,15 +1387,13 @@ export function printNode(
     case "case":
     case "caseTr": {
       const kOfIdx = filterChildrenTypeField(node, "kOf")[0] ?? -1;
-      const kOtherwiseIdx = filterChildrenTypeField(node, "kOtherwise")[0] ?? -1;
+      const kOtherwiseIdx =
+        filterChildrenTypeField(node, "kOtherwise")[0] ?? -1;
       const kElseIdx =
         filterChildrenTypeField(node, "kElse")[0] ??
         (kOtherwiseIdx >= 0 ? kOtherwiseIdx : -1);
       const kEndIdx =
         filterChildrenTypeField(node, "kEnd")[0] ?? node.childCount;
-
-      console.log({ kOtherwiseIdx });
-      console.log({ kElseIdx });
 
       const exprDocs: Doc[] = [];
       const exprEnd = kOfIdx !== -1 ? kOfIdx : node.childCount;
@@ -1453,7 +1489,6 @@ export function printNode(
     }
 
     case "exceptionHandler": {
-      // return "===exceptionHandler";
       const variable =
         filterThenCallPrint(path, printFn, node, "", "variable") ?? "";
       const exception =
@@ -1464,6 +1499,18 @@ export function printNode(
         group(["on", line, group([variable, exception]), line, "do"]),
         indent(group([line, body])),
       ]);
+    }
+
+    case "exceptionElse": {
+      const statements: Doc[] = [];
+      for (let i = 0; i < node.childCount; i++) {
+        const child = node.children[i];
+        if (child.type === "kElse") continue;
+        const statement = path.call(printFn, "children", i);
+        statements.push(statement);
+      }
+
+      return group(["else", indent([line, join(line, statements)])]);
     }
 
     case "try": {
@@ -1489,7 +1536,9 @@ export function printNode(
               line,
               join(
                 line,
-                filterThenCallPrint(path, printFn, node, "exceptionHandler"),
+                filterThenCallPrint(path, printFn, node, "", "except", [
+                  "kExcept",
+                ]),
               ),
             ]),
           ]),
@@ -1531,13 +1580,9 @@ export function printNode(
 
         withSkippedNodes([], () => {
           const statement = path.call(printFn, "children", i);
-          const statementString = printDocToString(statement, {
-            printWidth: 800,
-            tabWidth: 2,
-          });
           statements.push([
             statement,
-            statementString.formatted.endsWith(";") ? "" : ";",
+            node.children[i + 1].type === ";" ? ";" : "",
           ]);
         });
       }
