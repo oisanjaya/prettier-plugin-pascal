@@ -3,7 +3,7 @@ this
 is some comment
 }
 
-unit simple_unit;
+unit some.namespace.simple_unit;
 
 {$I synedit.inc}
 
