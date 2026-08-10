@@ -23,8 +23,6 @@ const {
   align,
 } = prettier.doc.builders;
 
-const { printDocToString } = prettier.doc.printer;
-
 type Parsers = Record<string, PrettierParser>;
 type Printers = Record<string, Printer>;
 
@@ -94,14 +92,31 @@ type GroupingType = "normal" | "indented";
 
 // Doc traversal and grouping.
 // each print...() function has their own state for clarity
+interface GroupDoc {
+  doc: Doc;
+  isSeparator: boolean;
+  isEmpty: boolean;
+}
+
 interface GroupState {
   retDoc: Doc[];
-  groupedRetDoc: Doc[];
+  groupedRetDoc: GroupDoc[];
   endGroupMarker: (string | undefined)[] | "use_field";
   endGroupMarkerField: string;
   groupingType: GroupingType;
   groupingSeparator: Doc;
   targetChildField: number[];
+}
+
+function createGroupDoc(
+  doc: Doc,
+  node?: TSNode,
+): GroupDoc {
+  return {
+    doc,
+    isSeparator: [":", ";", ","].includes(node?.type || ""),
+    isEmpty: node === undefined || node.text.trim() === "",
+  };
 }
 
 function createGroupState(): GroupState {
@@ -124,31 +139,23 @@ function pushChildNode(
   resetEndGroupMarker = true,
   noSeparatorBeforeStandardSeparator = false,
 ): boolean {
-  const joinChildren = (childDocs: Doc[]): Doc[] => {
+  const joinChildren = (childDocs: GroupDoc[]): Doc[] => {
     const retJoin: Doc[] = [];
     let firstChild = true;
     let previousIsStandardOperator = false;
 
     childDocs.forEach((doc, idx) => {
-      const childStr = printDocToString(doc, {
-        printWidth: 80,
-        tabWidth: 2,
-      });
-      const thisIsStandardSeparator = [":", ";", ","].includes(
-        childStr.formatted.trim(),
-      );
-
       if (
         !firstChild &&
         (!noSeparatorBeforeStandardSeparator ||
-          (!thisIsStandardSeparator && !previousIsStandardOperator))
+          (!doc.isSeparator && !previousIsStandardOperator))
       ) {
         retJoin.push(state.groupingSeparator);
       }
 
-      firstChild = firstChild && childStr.formatted.trim().length < 1;
-      retJoin.push(doc);
-      previousIsStandardOperator = thisIsStandardSeparator;
+      firstChild = firstChild && doc.isEmpty;
+      retJoin.push(doc.doc);
+      previousIsStandardOperator = doc.isSeparator;
     });
 
     return retJoin;
@@ -165,7 +172,7 @@ function pushChildNode(
       (state.endGroupMarker === "use_field" &&
         !state.targetChildField.includes(child.id))
     ) {
-      state.groupedRetDoc.push(childDoc);
+      state.groupedRetDoc.push(createGroupDoc(childDoc, child));
     }
   }
 
@@ -225,7 +232,7 @@ function listRetDoc(
   }
 
   if (state.groupedRetDoc.length > 0) {
-    state.retDoc.push(state.groupedRetDoc);
+    state.retDoc.push(state.groupedRetDoc.map((item) => item.doc));
     state.groupedRetDoc = [];
   }
 
@@ -274,7 +281,11 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 
   if (state.groupedRetDoc.length > 0) {
-    state.retDoc.push(hardline, hardline, state.groupedRetDoc);
+    state.retDoc.push(
+      hardline,
+      hardline,
+      state.groupedRetDoc.map((item) => item.doc),
+    );
   }
 
   return state.retDoc;
@@ -302,18 +313,21 @@ function printBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
 
     if (child.type === "kBegin") {
-      state.groupedRetDoc = [line];
+      state.groupedRetDoc = [createGroupDoc(line)];
       state.endGroupMarker = ["kEnd"];
     }
     if (child.type === "kEnd") {
       state.groupingSeparator = softline;
-      state.groupedRetDoc = [softline, child.text];
+      state.groupedRetDoc = [
+        createGroupDoc(softline),
+        createGroupDoc(child.text),
+      ];
       state.endGroupMarker = ["==remaining"];
     }
   }
 
   if (state.groupedRetDoc.length > 0) {
-    state.retDoc.push(state.groupedRetDoc);
+    state.retDoc.push(state.groupedRetDoc.map((item) => item.doc));
   }
 
   return state.retDoc;
@@ -350,7 +364,7 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 
   if (state.groupedRetDoc.length > 0) {
-    state.retDoc.push(group(state.groupedRetDoc));
+    state.retDoc.push(group(state.groupedRetDoc.map((item) => item.doc)));
     state.groupedRetDoc = [];
   }
 
@@ -390,7 +404,7 @@ function printDeclVar(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 
   if (state.groupedRetDoc.length > 0) {
-    state.retDoc.push(group(state.groupedRetDoc));
+    state.retDoc.push(group(state.groupedRetDoc.map((item) => item.doc)));
     state.groupedRetDoc = [];
   }
 
@@ -420,7 +434,15 @@ function printDeclVars(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 
   if (state.groupedRetDoc.length > 0) {
-    state.retDoc.push(indent([hardline, join(hardline, state.groupedRetDoc)]));
+    state.retDoc.push(
+      indent([
+        hardline,
+        join(
+          hardline,
+          state.groupedRetDoc.map((item) => item.doc),
+        ),
+      ]),
+    );
     state.groupedRetDoc = [];
   }
 
@@ -455,20 +477,24 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
     if (currentField !== lastField) {
       if (state.groupedRetDoc.length > 0) {
-        state.retDoc.push(group(state.groupedRetDoc));
+        state.retDoc.push(group(state.groupedRetDoc.map((item) => item.doc)));
         state.groupedRetDoc = [];
       }
       lastField = currentField;
-      state.groupedRetDoc.push(path.call(printFn, "children", i));
+      state.groupedRetDoc.push(
+        createGroupDoc(path.call(printFn, "children", i), child),
+      );
     } else if (currentField === "") {
       state.retDoc.push(path.call(printFn, "children", i));
     } else {
-      state.groupedRetDoc.push(path.call(printFn, "children", i));
+      state.groupedRetDoc.push(
+        createGroupDoc(path.call(printFn, "children", i), child),
+      );
     }
   }
 
   if (state.groupedRetDoc.length > 0) {
-    state.retDoc.push(group(state.groupedRetDoc));
+    state.retDoc.push(group(state.groupedRetDoc.map((item) => item.doc)));
     state.groupedRetDoc = [];
   }
 
@@ -505,7 +531,7 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   state.endGroupMarker = ["kElse"];
   state.groupingSeparator = line;
   state.groupingType = "indented";
-  state.groupedRetDoc = [line];
+  state.groupedRetDoc = [createGroupDoc(line)];
 
   for (; i < node.childCount; i++) {
     const child = node.child(i);
@@ -538,7 +564,12 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   if (state.groupedRetDoc.length > 0) {
     state.retDoc.push(
-      group(join(state.groupingSeparator, state.groupedRetDoc)),
+      group(
+        join(
+          state.groupingSeparator,
+          state.groupedRetDoc.map((item) => item.doc),
+        ),
+      ),
     );
   }
 
