@@ -90,6 +90,12 @@ type PrintFn = (path: AstPath<TSNode>) => Doc;
 
 type GroupingType = "normal" | "indented";
 
+type GroupEndMarker =
+  | { type: "none" }
+  | { type: "node"; markers: string[] }
+  | { type: "field"; fieldIds: number[] }
+  | { type: "until-end" };
+
 // Doc traversal and grouping.
 // each print...() function has their own state for clarity
 interface GroupDoc {
@@ -101,11 +107,10 @@ interface GroupDoc {
 interface GroupState {
   retDoc: Doc[];
   groupedRetDoc: GroupDoc[];
-  endGroupMarker: (string | undefined)[] | "use_field";
+  endGroupMarker: GroupEndMarker;
   endGroupMarkerField: string;
   groupingType: GroupingType;
   groupingSeparator: Doc;
-  targetChildField: number[];
 }
 
 interface PushChildResult {
@@ -125,12 +130,27 @@ function createGroupState(): GroupState {
   return {
     retDoc: [],
     groupedRetDoc: [],
-    endGroupMarker: [undefined],
+    endGroupMarker: { type: "none" },
     endGroupMarkerField: "",
     groupingType: "normal",
     groupingSeparator: softline,
-    targetChildField: [],
   };
+}
+
+function shouldCloseGroup(state: GroupState, child: TSNode): boolean {
+  switch (state.endGroupMarker.type) {
+    case "none":
+      return false;
+
+    case "until-end":
+      return false;
+
+    case "node":
+      return state.endGroupMarker.markers.includes(child.type);
+
+    case "field":
+      return state.endGroupMarker.fieldIds.includes(child.id);
+  }
 }
 
 function pushChildNode(
@@ -139,7 +159,7 @@ function pushChildNode(
   childDoc: Doc,
   skipMarkerNode: (string | undefined)[] | boolean = false,
   resetEndGroupMarker = true,
-  noSeparatorBeforeStandardSeparator = false,
+  noSeparatorAroundStandardSeparator = false,
 ): PushChildResult {
   let consumed = false;
   let groupClosed = false;
@@ -152,7 +172,7 @@ function pushChildNode(
     childDocs.forEach((doc, idx) => {
       if (
         !firstChild &&
-        (!noSeparatorBeforeStandardSeparator ||
+        (!noSeparatorAroundStandardSeparator ||
           (!doc.isSeparator && !previousIsStandardOperator))
       ) {
         retJoin.push(state.groupingSeparator);
@@ -166,30 +186,30 @@ function pushChildNode(
     return retJoin;
   };
 
-  if (state.endGroupMarker[0] === undefined) {
+  if (state.endGroupMarker.type === "none") {
     state.retDoc.push(childDoc);
   } else {
     if (
       skipMarkerNode === false ||
       !(
-        Array.isArray(skipMarkerNode) ? skipMarkerNode : state.endGroupMarker
+        Array.isArray(skipMarkerNode)
+          ? skipMarkerNode
+          : state.endGroupMarker.type === "node"
+            ? state.endGroupMarker.markers
+            : []
       ).includes(child.type) ||
-      (state.endGroupMarker === "use_field" &&
-        !state.targetChildField.includes(child.id))
+      (state.endGroupMarker.type === "field" &&
+        !state.endGroupMarker.fieldIds.includes(child.id))
     ) {
       consumed = true;
       state.groupedRetDoc.push(createGroupDoc(childDoc, child));
     }
   }
 
-  if (
-    state.endGroupMarker[0] !== undefined &&
-    (state.endGroupMarker.includes(child.type) ||
-      state.targetChildField.includes(child.id))
-  ) {
+  if (shouldCloseGroup(state, child)) {
     if (resetEndGroupMarker) {
       state.endGroupMarkerField = "";
-      state.endGroupMarker = [undefined];
+      state.endGroupMarker = { type: "none" };
     }
 
     if (state.groupingType === "indented") {
@@ -213,7 +233,7 @@ function listRetDoc(
   state: GroupState,
   separator: string = ",",
 ): Doc[] {
-  state.endGroupMarker = [separator];
+  state.endGroupMarker = { type: "node", markers: [separator] };
   state.groupingSeparator = line;
   state.retDoc = [softline];
 
@@ -287,12 +307,12 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
 
     if (["kProgram", "kLibrary", "kUnit"].includes(child.type)) {
-      state.endGroupMarker = [";"];
+      state.endGroupMarker = { type: "node", markers: [";"] };
       state.groupingSeparator = line;
     }
 
     if (["block"].includes(child.type)) {
-      state.endGroupMarker = ["==remaining"];
+      state.endGroupMarker = { type: "until-end" };
       state.groupingSeparator = line;
     }
 
@@ -307,7 +327,7 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       state.retDoc.push(";", hardline);
     }
 
-    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+    if (pushChildResult.consumed || state.endGroupMarker.type === "none") {
       childCursor++;
     }
   }
@@ -345,12 +365,12 @@ function printBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     const pushChildResult = pushChildNode(state, child, statement, true, false);
 
     if (pushChildResult.groupClosed) {
-      state.endGroupMarker = [undefined];
+      state.endGroupMarker = { type: "none" };
     }
 
     if (child.type === "kBegin") {
       state.groupedRetDoc = [createGroupDoc(line)];
-      state.endGroupMarker = ["kEnd"];
+      state.endGroupMarker = { type: "node", markers: ["kEnd"] };
     }
     if (child.type === "kEnd") {
       state.groupingSeparator = softline;
@@ -358,10 +378,10 @@ function printBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
         createGroupDoc(softline),
         createGroupDoc(child.text),
       ];
-      state.endGroupMarker = ["==remaining"];
+      state.endGroupMarker = { type: "until-end" };
     }
 
-    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+    if (pushChildResult.consumed || state.endGroupMarker.type === "none") {
       childCursor++;
     }
   }
@@ -377,12 +397,12 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
   const state = createGroupState();
-  state.endGroupMarker = "use_field";
+  state.endGroupMarker = {
+    type: "field",
+    fieldIds: node.childrenForFieldName("name").map((item) => item.id),
+  };
   state.groupingSeparator = line;
   state.groupingType = "indented";
-  state.targetChildField = node
-    .childrenForFieldName("name")
-    .map((item) => item.id);
 
   let childCursor = 0;
   while (childCursor < node.childCount) {
@@ -402,11 +422,11 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     );
 
     if (pushChildResult.groupClosed) {
-      state.endGroupMarker = ["==remaining"];
+      state.endGroupMarker = { type: "until-end" };
       state.groupingSeparator = softline;
     }
 
-    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+    if (pushChildResult.consumed) {
       childCursor++;
     }
   }
@@ -423,7 +443,7 @@ function printDeclVar(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
   const state = createGroupState();
-  state.endGroupMarker = [":"];
+  state.endGroupMarker = { type: "node", markers: [":"] };
   state.groupingSeparator = line;
   state.groupingType = "indented";
 
@@ -452,7 +472,7 @@ function printDeclVar(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     //   console.log({ groupretdoc: state.groupedRetDoc.map((item) => item.doc) });
     // }
 
-    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+    if (pushChildResult.consumed) {
       childCursor++;
     }
 
@@ -461,7 +481,7 @@ function printDeclVar(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   }
 
-  state.endGroupMarker = ["===remaining"];
+  state.endGroupMarker = { type: "until-end" };
   state.groupingSeparator = line;
   state.groupingType = "indented";
   while (childCursor < node.childCount) {
@@ -495,7 +515,7 @@ function printDeclVars(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
   const state = createGroupState();
-  state.endGroupMarker = ["declVar"];
+  state.endGroupMarker = { type: "node", markers: ["declVar"] };
   state.groupingSeparator = line;
 
   let childCursor = 0;
@@ -510,15 +530,15 @@ function printDeclVars(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       state,
       child,
       path.call(printFn, "children", childCursor),
-      [state.endGroupMarker[0] ?? ""],
+      false,
     );
 
     if (pushChildResult.groupClosed) {
-      state.endGroupMarker = ["==remaining"];
+      state.endGroupMarker = { type: "until-end" };
       state.groupingSeparator = line;
     }
 
-    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+    if (pushChildResult.consumed) {
       childCursor++;
     }
   }
@@ -601,7 +621,7 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
   const state = createGroupState();
-  state.endGroupMarker = ["kThen"];
+  state.endGroupMarker = { type: "node", markers: ["kThen"] };
   state.groupingSeparator = line;
   state.groupingType = "normal";
 
@@ -621,7 +641,7 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       true,
     );
 
-    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+    if (pushChildResult.consumed) {
       childCursor++;
     }
 
@@ -630,7 +650,7 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   }
 
-  state.endGroupMarker = ["kElse"];
+  state.endGroupMarker = { type: "node", markers: ["kElse"] };
   state.groupingSeparator = line;
   state.groupingType = "indented";
   state.groupedRetDoc = [createGroupDoc(line)];
@@ -650,7 +670,7 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       true,
     );
 
-    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+    if (pushChildResult.consumed) {
       childCursor++;
     }
 
@@ -661,7 +681,7 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   state.retDoc.push(line);
 
-  state.endGroupMarker = ["==remaining"];
+  state.endGroupMarker = { type: "until-end" };
   state.groupingSeparator = line;
   state.groupingType = "indented";
   state.groupedRetDoc = [];
@@ -681,7 +701,7 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       true,
     );
 
-    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+    if (pushChildResult.consumed) {
       childCursor++;
     }
 
@@ -729,10 +749,10 @@ function printTyperefTpl(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     );
 
     if (child.type === "kLt") {
-      state.endGroupMarker = ["kGt"];
+      state.endGroupMarker = { type: "node", markers: ["kGt"] };
     }
 
-    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+    if (pushChildResult.consumed || state.endGroupMarker.type === "none") {
       childCursor++;
     }
   }
