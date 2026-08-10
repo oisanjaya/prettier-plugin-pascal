@@ -92,7 +92,7 @@ type PrintFn = (path: AstPath<TSNode>) => Doc;
 
 type GroupingType = "normal" | "indented";
 
-// Doc traversal and grouping. 
+// Doc traversal and grouping.
 // each print...() function has their own state for clarity
 interface GroupState {
   retDoc: Doc[];
@@ -293,10 +293,10 @@ function printBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     let statement = path.call(printFn, "children", i);
 
     if (child.nextSibling?.type === ";") {
-      statement = group([statement, child.nextSibling.text]);
+      statement = group([statement, child.nextSibling.text, line]);
     }
 
-    if (pushChildNode(state, child, statement, true, true)) {
+    if (pushChildNode(state, child, statement, true, false)) {
       i--;
       state.endGroupMarker = [undefined];
     }
@@ -307,7 +307,7 @@ function printBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
     if (child.type === "kEnd") {
       state.groupingSeparator = softline;
-      state.groupedRetDoc = [line, child.text];
+      state.groupedRetDoc = [softline, child.text];
       state.endGroupMarker = ["==remaining"];
     }
   }
@@ -475,6 +475,76 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   return group(indent([hardline, state.retDoc]));
 }
 
+function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+  const state = createGroupState();
+  state.endGroupMarker = ["kThen"];
+  state.groupingSeparator = line;
+  state.groupingType = "normal";
+
+  let i = 0;
+  for (; i < node.childCount; i++) {
+    const child = node.child(i);
+    if (!child) continue;
+
+    if (
+      pushChildNode(
+        state,
+        child,
+        path.call(printFn, "children", i),
+        false,
+        true,
+      )
+    ) {
+      i++;
+      break;
+    }
+  }
+
+  state.endGroupMarker = ["kElse"];
+  state.groupingSeparator = line;
+  state.groupingType = "indented";
+  state.groupedRetDoc = [line];
+
+  for (; i < node.childCount; i++) {
+    const child = node.child(i);
+    if (!child) continue;
+
+    if (
+      pushChildNode(state, child, path.call(printFn, "children", i), true, true)
+    ) {
+      break;
+    }
+  }
+
+  state.retDoc.push(line);
+
+  state.endGroupMarker = ["==remaining"];
+  state.groupingSeparator = line;
+  state.groupingType = "indented";
+  state.groupedRetDoc = [];
+
+  for (; i < node.childCount; i++) {
+    const child = node.child(i);
+    if (!child) continue;
+
+    if (
+      pushChildNode(state, child, path.call(printFn, "children", i), true, true)
+    ) {
+      break;
+    }
+  }
+
+  if (state.groupedRetDoc.length > 0) {
+    state.retDoc.push(
+      group(join(state.groupingSeparator, state.groupedRetDoc)),
+    );
+  }
+
+  return state.retDoc;
+}
+
 function printTyperefTpl(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
@@ -514,7 +584,7 @@ export function printNode(
   if (!node) return "";
 
   if (!node?.type) return "";
-  if (["kDot", "kHat"].includes(node.type)) return node.text;
+  if (["kDot", "kHat", "kAt"].includes(node.type)) return node.text;
   if (["kGt", "kLt"].includes(node.type)) {
     if (["exprBinary", "operatorName"].includes(node.parent?.type ?? "")) {
       return [line, node.text, line];
@@ -531,7 +601,6 @@ export function printNode(
       "kSub",
       "kMul",
       "kFdiv",
-      "kAt",
       "kAssign",
       "kAssignAdd",
       "kAssignSub",
@@ -574,13 +643,10 @@ export function printNode(
       return printDeclVars(path, printFn);
     case "defProc":
       return printDefProc(path, printFn);
+    case "ifElse":
+      return printIfElse(path, printFn);
     case "typerefTpl":
       return printTyperefTpl(path, printFn);
-    case "statement":
-    case "exprCall":
-    case "exprParens":
-    case "exprBinary":
-      return group(join(softline, path.map(printFn, "children")));
     case "declArgs": {
       const state = createGroupState();
       return listRetDoc(node, path, printFn, state, ";");
@@ -591,8 +657,14 @@ export function printNode(
     }
     case "typeref":
       return group(join(line, path.map(printFn, "children")));
-    case "ifElse":
+    case "assignment":
+    case "exprUnary":
+    case "exprBinary":
     case "typerefPtr":
+    case "exprCall":
+    case "exprParens":
+    case "exprDot":
+    case "statement":
       return group(join(softline, path.map(printFn, "children")));
     default: {
       const ret = join(line, path.map(printFn, "children"));
