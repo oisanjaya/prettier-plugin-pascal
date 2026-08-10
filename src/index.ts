@@ -157,7 +157,7 @@ function pushChildNode(
   state: GroupState,
   child: TSNode,
   childDoc: Doc,
-  skipMarkerNode: (string | undefined)[] | boolean = false,
+  skipMarkerNode = false,
   resetEndGroupMarker = true,
   noSeparatorAroundStandardSeparator = false,
 ): PushChildResult {
