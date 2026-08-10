@@ -151,13 +151,7 @@ export function printNode(
   let endGroupMarkerField: string = "";
   let groupingType: GroupingType = "normal";
   let groupingSeparator: Doc = softline;
-  let targetCildField: number[] = [];
-  // if (endGroupMarker === "use_field") {
-  //   targetCildField =
-  //     node
-  //       ?.childrenForFieldName(endGroupMarkerField)
-  //       .map((item) => item.id) ?? [];
-  // }
+  let targetChildField: number[] = [];
 
   // Helper function to decide wether childDoc pushed to retDoc or groupedRetDoc
   // returns true if endGroupMarker reached and groupedRetDoc transfered to retDoc
@@ -172,7 +166,7 @@ export function printNode(
       const retJoin: Doc[] = [];
       let firstChild = true;
       let previousIsStandardOperator = false;
-      childDocs.forEach((child) => {
+      childDocs.forEach((child, idx) => {
         const childStr = printDocToString(child, {
           printWidth: 80,
           tabWidth: 2,
@@ -189,7 +183,7 @@ export function printNode(
           )
             retJoin.push(groupingSeparator);
         }
-        firstChild = false;
+        firstChild = firstChild && childStr.formatted.trim().length < 1;
         retJoin.push(child);
 
         previousIsStandardOperator = thisIsStandardSeparator;
@@ -200,12 +194,18 @@ export function printNode(
     if (endGroupMarker[0] === undefined) {
       retDoc.push(childDoc);
     } else {
+      if (endGroupMarker === "use_field") {
+        console.log("test targetChildField includes child.id");
+        console.log({ targetChildField });
+        console.log({ childid: child.id });
+      }
+
       if (
         skipEndMarker === false ||
         !(
           Array.isArray(skipEndMarker) ? skipEndMarker : endGroupMarker
         ).includes(child?.type) ||
-        (endGroupMarker === "use_field" && !targetCildField.includes(child.id))
+        (endGroupMarker === "use_field" && !targetChildField.includes(child.id))
       ) {
         groupedRetDoc.push(childDoc);
       }
@@ -214,7 +214,7 @@ export function printNode(
     if (
       endGroupMarker[0] !== undefined &&
       (endGroupMarker.includes(child?.type) ||
-        targetCildField.includes(child.id))
+        targetChildField.includes(child.id))
     ) {
       if (resetEndGroupMarker) {
         endGroupMarkerField = "";
@@ -311,11 +311,15 @@ export function printNode(
       groupingType = "indented";
       for (let i = 0; i < node.childCount; i++) {
         const child = node.child(i);
-        if (!child) continue;
+        if (!child || child.type === ";") continue;
 
-        if (
-          pushChildNode(child, path.call(printFn, "children", i), true, true)
-        ) {
+        let statement = path.call(printFn, "children", i);
+
+        if (child.nextSibling?.type === ";") {
+          statement = group([statement, child.nextSibling.text]);
+        }
+
+        if (pushChildNode(child, statement, true, true)) {
           i--;
           endGroupMarker = [undefined];
         }
@@ -325,7 +329,6 @@ export function printNode(
           endGroupMarker = ["kEnd"];
         }
         if (child.type === "kEnd") {
-          // retDoc[retDoc.length - 1] = [retDoc[retDoc.length - 1], softline];
           groupingSeparator = softline;
           groupedRetDoc = [line, child.text];
           endGroupMarker = ["==remaining"];
@@ -343,13 +346,51 @@ export function printNode(
       return group(path.map(printFn, "children"));
     }
 
+    case "declProc": {
+      endGroupMarker = "use_field";
+      groupingSeparator = line;
+      groupingType = "indented";
+      targetChildField =
+        node?.childrenForFieldName("name").map((item) => item.id) ?? [];
+
+      console.log({ targetChildField });
+
+      for (let i = 0; i < node.childCount; i++) {
+        const child = node.child(i);
+        if (!child) continue;
+
+        if (
+          pushChildNode(
+            child,
+            path.call(printFn, "children", i),
+            false,
+            true,
+            true,
+          )
+        ) {
+          endGroupMarker = ["==remaining"];
+          groupingSeparator = softline;
+        }
+
+        console.log("=======================");
+        console.log(child.type);
+        console.log({ retDoc });
+        console.log({ groupedRetDoc });
+      }
+
+      if (groupedRetDoc.length > 0) {
+        retDoc.push(group(groupedRetDoc));
+        groupedRetDoc = [];
+      }
+
+      return retDoc;
+    }
+
     case "declArg":
     case "declVar": {
       endGroupMarker = [":"];
 
       groupingSeparator = line;
-      // if (node.type === "declArg") groupingSeparator = line;
-      // if (node.type === "declVar") groupingSeparator = softline;
 
       groupingType = "indented";
       for (let i = 0; i < node.childCount; i++) {
@@ -478,6 +519,13 @@ export function printNode(
       return retDoc;
     }
 
+    case "statement":
+    case "exprCall":
+    case "exprParens":
+    case "exprBinary": {
+      return group(join(softline, path.map(printFn, "children")));
+    }
+
     case "declArgs": {
       return listRetDoc(";");
     }
@@ -486,13 +534,12 @@ export function printNode(
       return listRetDoc();
     }
 
-    case "declProc":
     case "typeref": {
       return group(join(line, path.map(printFn, "children")));
     }
 
+    case "ifElse":
     case "typerefPtr": {
-      console.log(node.type);
       return group(join(softline, path.map(printFn, "children")));
     }
 
