@@ -13,7 +13,7 @@ a
 ^Real;
 procedure
 myproc
-(out i:
+(out i, j:
 Integer; var k: char);
 var a:integer;
 begin
