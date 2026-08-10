@@ -108,10 +108,12 @@ interface GroupState {
   targetChildField: number[];
 }
 
-function createGroupDoc(
-  doc: Doc,
-  node?: TSNode,
-): GroupDoc {
+interface PushChildResult {
+  consumed: boolean;
+  groupClosed: boolean;
+}
+
+function createGroupDoc(doc: Doc, node?: TSNode): GroupDoc {
   return {
     doc,
     isSeparator: [":", ";", ","].includes(node?.type || ""),
@@ -138,7 +140,10 @@ function pushChildNode(
   skipMarkerNode: (string | undefined)[] | boolean = false,
   resetEndGroupMarker = true,
   noSeparatorBeforeStandardSeparator = false,
-): boolean {
+): PushChildResult {
+  let consumed = false;
+  let groupClosed = false;
+
   const joinChildren = (childDocs: GroupDoc[]): Doc[] => {
     const retJoin: Doc[] = [];
     let firstChild = true;
@@ -172,6 +177,7 @@ function pushChildNode(
       (state.endGroupMarker === "use_field" &&
         !state.targetChildField.includes(child.id))
     ) {
+      consumed = true;
       state.groupedRetDoc.push(createGroupDoc(childDoc, child));
     }
   }
@@ -192,11 +198,12 @@ function pushChildNode(
       state.retDoc.push(group(joinChildren(state.groupedRetDoc)));
     }
 
+    groupClosed = true;
+
     state.groupedRetDoc = [];
-    return true;
   }
 
-  return false;
+  return { consumed, groupClosed };
 }
 
 function listRetDoc(
@@ -210,25 +217,32 @@ function listRetDoc(
   state.groupingSeparator = line;
   state.retDoc = [softline];
 
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (!child) continue;
+  let childCursor = 0;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child) {
+      childCursor++;
+      listRetDoc;
+      continue;
+    }
 
-    if (
-      pushChildNode(
-        state,
-        child,
-        path.call(printFn, "children", i),
-        true,
-        false,
-      )
-    ) {
+    const pushChildResult = pushChildNode(
+      state,
+      child,
+      path.call(printFn, "children", childCursor),
+      true,
+      false,
+    );
+
+    if (pushChildResult.groupClosed) {
       state.retDoc[state.retDoc.length - 1] = group([
         state.retDoc[state.retDoc.length - 1],
         ",",
         line,
       ]);
     }
+
+    childCursor++;
   }
 
   if (state.groupedRetDoc.length > 0) {
@@ -244,8 +258,11 @@ function printRoot(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
 
-  for (let i = 0; i < node.childCount; i++) {
-    state.retDoc.push(path.call(printFn, "children", i));
+  let childCursor = 0;
+  while (childCursor < node.childCount) {
+    state.retDoc.push(path.call(printFn, "children", childCursor));
+
+    childCursor++;
   }
 
   if (process.env.DEBUG_PASCAL_DOC) {
@@ -261,9 +278,13 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   if (!node) return "";
   const state = createGroupState();
 
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (!child) continue;
+  let childCursor = 0;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child) {
+      childCursor++;
+      continue;
+    }
 
     if (["kProgram", "kLibrary", "kUnit"].includes(child.type)) {
       state.endGroupMarker = [";"];
@@ -275,8 +296,19 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       state.groupingSeparator = line;
     }
 
-    if (pushChildNode(state, child, path.call(printFn, "children", i), true)) {
+    const pushChildResult = pushChildNode(
+      state,
+      child,
+      path.call(printFn, "children", childCursor),
+      true,
+    );
+
+    if (pushChildResult.groupClosed) {
       state.retDoc.push(";", hardline);
+    }
+
+    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+      childCursor++;
     }
   }
 
@@ -296,19 +328,23 @@ function printBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   if (!node) return "";
   const state = createGroupState();
   state.groupingType = "indented";
+  let childCursor = 0;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child || child.type === ";") {
+      childCursor++;
+      continue;
+    }
 
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (!child || child.type === ";") continue;
-
-    let statement = path.call(printFn, "children", i);
+    let statement = path.call(printFn, "children", childCursor);
 
     if (child.nextSibling?.type === ";") {
       statement = group([statement, child.nextSibling.text, line]);
     }
 
-    if (pushChildNode(state, child, statement, true, false)) {
-      i--;
+    const pushChildResult = pushChildNode(state, child, statement, true, false);
+
+    if (pushChildResult.groupClosed) {
       state.endGroupMarker = [undefined];
     }
 
@@ -323,6 +359,10 @@ function printBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
         createGroupDoc(child.text),
       ];
       state.endGroupMarker = ["==remaining"];
+    }
+
+    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+      childCursor++;
     }
   }
 
@@ -344,22 +384,30 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     .childrenForFieldName("name")
     .map((item) => item.id);
 
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (!child) continue;
+  let childCursor = 0;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child) {
+      childCursor++;
+      continue;
+    }
 
-    if (
-      pushChildNode(
-        state,
-        child,
-        path.call(printFn, "children", i),
-        false,
-        true,
-        true,
-      )
-    ) {
+    const pushChildResult = pushChildNode(
+      state,
+      child,
+      path.call(printFn, "children", childCursor),
+      false,
+      true,
+      true,
+    );
+
+    if (pushChildResult.groupClosed) {
       state.endGroupMarker = ["==remaining"];
       state.groupingSeparator = softline;
+    }
+
+    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+      childCursor++;
     }
   }
 
@@ -379,28 +427,60 @@ function printDeclVar(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   state.groupingSeparator = line;
   state.groupingType = "indented";
 
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (!child) continue;
-
-    if (
-      pushChildNode(
-        state,
-        child,
-        path.call(printFn, "children", i),
-        true,
-        false,
-        true,
-      )
-    ) {
-      state.retDoc.push(state.endGroupMarker[0] ?? "", " ");
-      if (state.endGroupMarker[0] === ":") {
-        state.groupingType = "indented";
-        state.endGroupMarker = [";"];
-      } else {
-        state.endGroupMarker = [undefined];
-      }
+  let childCursor = 0;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child) {
+      childCursor++;
+      continue;
     }
+
+    const pushChildResult = pushChildNode(
+      state,
+      child,
+      path.call(printFn, "children", childCursor),
+      false,
+      true,
+      true,
+    );
+
+    // if (child.type === ":") {
+    //   console.log({ afterpushchild: childCursor });
+    //   console.log(JSON.stringify(state));
+    //   console.log({ childtype: child.type });
+    //   console.log(JSON.stringify(pushChildResult));
+    //   console.log({ groupretdoc: state.groupedRetDoc.map((item) => item.doc) });
+    // }
+
+    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+      childCursor++;
+    }
+
+    if (pushChildResult.groupClosed) {
+      break;
+    }
+  }
+
+  state.endGroupMarker = ["===remaining"];
+  state.groupingSeparator = line;
+  state.groupingType = "indented";
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child) {
+      childCursor++;
+      continue;
+    }
+
+    pushChildNode(
+      state,
+      child,
+      path.call(printFn, "children", childCursor),
+      false,
+      true,
+      true,
+    );
+
+    childCursor++;
   }
 
   if (state.groupedRetDoc.length > 0) {
@@ -418,18 +498,28 @@ function printDeclVars(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   state.endGroupMarker = ["declVar"];
   state.groupingSeparator = line;
 
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (!child) continue;
+  let childCursor = 0;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child) {
+      childCursor++;
+      continue;
+    }
 
-    if (
-      pushChildNode(state, child, path.call(printFn, "children", i), [
-        state.endGroupMarker[0] ?? "",
-      ])
-    ) {
-      i--;
+    const pushChildResult = pushChildNode(
+      state,
+      child,
+      path.call(printFn, "children", childCursor),
+      [state.endGroupMarker[0] ?? ""],
+    );
+
+    if (pushChildResult.groupClosed) {
       state.endGroupMarker = ["==remaining"];
       state.groupingSeparator = line;
+    }
+
+    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+      childCursor++;
     }
   }
 
@@ -463,9 +553,13 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   state.groupedRetDoc = [];
   state.retDoc = [];
 
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (!child) continue;
+  let childCursor = 0;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child) {
+      childCursor++;
+      continue;
+    }
 
     const currentField = headerChild.includes(child.id)
       ? "header"
@@ -482,15 +576,17 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       }
       lastField = currentField;
       state.groupedRetDoc.push(
-        createGroupDoc(path.call(printFn, "children", i), child),
+        createGroupDoc(path.call(printFn, "children", childCursor), child),
       );
     } else if (currentField === "") {
-      state.retDoc.push(path.call(printFn, "children", i));
+      state.retDoc.push(path.call(printFn, "children", childCursor));
     } else {
       state.groupedRetDoc.push(
-        createGroupDoc(path.call(printFn, "children", i), child),
+        createGroupDoc(path.call(printFn, "children", childCursor), child),
       );
     }
+
+    childCursor++;
   }
 
   if (state.groupedRetDoc.length > 0) {
@@ -509,21 +605,27 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   state.groupingSeparator = line;
   state.groupingType = "normal";
 
-  let i = 0;
-  for (; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (!child) continue;
+  let childCursor = 0;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child) {
+      childCursor++;
+      continue;
+    }
 
-    if (
-      pushChildNode(
-        state,
-        child,
-        path.call(printFn, "children", i),
-        false,
-        true,
-      )
-    ) {
-      i++;
+    const pushChildResult = pushChildNode(
+      state,
+      child,
+      path.call(printFn, "children", childCursor),
+      false,
+      true,
+    );
+
+    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+      childCursor++;
+    }
+
+    if (pushChildResult.groupClosed) {
       break;
     }
   }
@@ -533,13 +635,26 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   state.groupingType = "indented";
   state.groupedRetDoc = [createGroupDoc(line)];
 
-  for (; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (!child) continue;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child) {
+      childCursor++;
+      continue;
+    }
 
-    if (
-      pushChildNode(state, child, path.call(printFn, "children", i), true, true)
-    ) {
+    const pushChildResult = pushChildNode(
+      state,
+      child,
+      path.call(printFn, "children", childCursor),
+      true,
+      true,
+    );
+
+    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+      childCursor++;
+    }
+
+    if (pushChildResult.groupClosed) {
       break;
     }
   }
@@ -551,13 +666,26 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   state.groupingType = "indented";
   state.groupedRetDoc = [];
 
-  for (; i < node.childCount; i++) {
-    const child = node.child(i);
-    if (!child) continue;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
+    if (!child) {
+      childCursor++;
+      continue;
+    }
 
-    if (
-      pushChildNode(state, child, path.call(printFn, "children", i), true, true)
-    ) {
+    const pushChildResult = pushChildNode(
+      state,
+      child,
+      path.call(printFn, "children", childCursor),
+      true,
+      true,
+    );
+
+    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+      childCursor++;
+    }
+
+    if (pushChildResult.groupClosed) {
       break;
     }
   }
@@ -581,21 +709,31 @@ function printTyperefTpl(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   if (!node) return "";
   const state = createGroupState();
 
-  for (let i = 0; i < node.childCount; i++) {
-    const child = node.child(i);
+  let childCursor = 0;
+  while (childCursor < node.childCount) {
+    const child = node.child(childCursor);
     state.groupingSeparator = softline;
     state.groupingType = "indented";
 
-    if (!child) continue;
-
-    if (
-      pushChildNode(state, child, path.call(printFn, "children", i), true, true)
-    ) {
-      i--;
+    if (!child) {
+      childCursor++;
+      continue;
     }
+
+    const pushChildResult = pushChildNode(
+      state,
+      child,
+      path.call(printFn, "children", childCursor),
+      true,
+      true,
+    );
 
     if (child.type === "kLt") {
       state.endGroupMarker = ["kGt"];
+    }
+
+    if (pushChildResult.consumed || state.endGroupMarker[0] === undefined) {
+      childCursor++;
     }
   }
 
@@ -695,8 +833,10 @@ export function printNode(
     case "exprCall":
     case "exprParens":
     case "exprDot":
-    case "statement":
-      return group(join(softline, path.map(printFn, "children")));
+    case "statement": {
+      const testRet = group(join(softline, path.map(printFn, "children")));
+      return testRet;
+    }
     default: {
       const ret = join(line, path.map(printFn, "children"));
       return ret.length === 0 ? node.text || "" : ret;
