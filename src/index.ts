@@ -216,7 +216,6 @@ function listRetDoc(
     const child = node.child(childCursor);
     if (!child) {
       childCursor++;
-      listRetDoc;
       continue;
     }
 
