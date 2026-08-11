@@ -718,17 +718,30 @@ function printTyperefTpl(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       state,
       child,
       path.call(printFn, "children", childCursor),
-      true,
+      state.endCondition.type === "node" &&
+        state.endCondition.markers[0] === "kGt",
       true,
     );
 
-    if (child.type === "kLt") {
-      state.endCondition = { type: "node", markers: ["kGt"] };
+    if (pushChildResult.groupClosed) {
+      if (child.type === "kLt") {
+        state.endCondition = { type: "node", markers: ["kGt"] };
+        state.groupingSeparator = softline;
+      } else {
+        state.retDoc.push(softline);
+        state.endCondition = { type: "until-end" };
+        state.groupingSeparator = line;
+      }
     }
 
-    if (pushChildResult.consumed || state.endCondition.type === "none") {
+    if (pushChildResult.consumed) {
       childCursor++;
     }
+  }
+
+  if (state.groupedRetDoc.length > 0) {
+    state.retDoc.push(group(state.groupedRetDoc.map((item) => item.doc)));
+    state.groupedRetDoc = [];
   }
 
   return state.retDoc;
