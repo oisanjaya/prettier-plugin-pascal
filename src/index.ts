@@ -498,17 +498,18 @@ function printDeclVars(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       childCursor++;
       continue;
     }
-
+    
     const pushChildResult = pushChildNode(
       state,
       child,
       path.call(printFn, "children", childCursor),
-      false,
+      true,
     );
 
     if (pushChildResult.groupClosed) {
       state.endCondition = { type: "until-end" };
       state.groupingSeparator = line;
+      state.groupingType = "indented";
     }
 
     if (pushChildResult.consumed) {
