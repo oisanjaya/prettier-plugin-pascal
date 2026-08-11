@@ -10,6 +10,7 @@ import prettier, {
   Doc,
 } from "prettier";
 import { builders } from "prettier/doc";
+import { GroupDoc, GroupState } from "./printer/types";
 
 const {
   group,
@@ -87,30 +88,6 @@ export const printers: Printers = {
 export const options: Options = {};
 
 type PrintFn = (path: AstPath<TSNode>) => Doc;
-
-type GroupingType = "normal" | "indented";
-
-type GroupEndMarker =
-  | { type: "none" }
-  | { type: "node"; markers: string[] }
-  | { type: "field"; fieldIds: number[] }
-  | { type: "until-end" };
-
-// Doc traversal and grouping.
-// each print...() function has their own state for clarity
-interface GroupDoc {
-  doc: Doc;
-  isSeparator: boolean;
-  isEmpty: boolean;
-}
-
-interface GroupState {
-  retDoc: Doc[];
-  groupedRetDoc: GroupDoc[];
-  endCondition: GroupEndMarker;
-  groupingType: GroupingType;
-  groupingSeparator: Doc;
-}
 
 interface PushChildResult {
   consumed: boolean;
