@@ -703,6 +703,9 @@ function printTyperefTpl(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   if (!node) return "";
   const state = createGroupState();
 
+  state.endCondition = { type: "node", markers: ["kLt"] };
+  state.groupingSeparator = line;
+
   let childCursor = 0;
   while (childCursor < node.childCount) {
     const child = node.child(childCursor);
