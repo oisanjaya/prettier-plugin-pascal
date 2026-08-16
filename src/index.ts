@@ -10,8 +10,17 @@ import prettier, {
   Doc,
 } from "prettier";
 
-const { group, join, line, hardline, softline, indent, ifBreak } =
-  prettier.doc.builders;
+const {
+  group,
+  join,
+  line,
+  hardline,
+  softline,
+  indent,
+  ifBreak,
+  breakParent,
+  lineSuffix,
+} = prettier.doc.builders;
 
 type Parsers = Record<string, PrettierParser>;
 type Printers = Record<string, Printer>;
@@ -105,81 +114,71 @@ export const options: Options = {};
 
 type PrintFn = (path: AstPath<TSNode>) => Doc;
 
-function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
-  const node = path.getNode();
-  let childNextSibling = node?.child(idx + 1);
-  const child = node?.child(idx);
+function notEmptyNode(node: Doc): boolean {
+  if (node === "") return false;
+  if (Array.isArray(node) && node.flat(5)[0] === "") return false;
 
-  let parentNode: TSNode | null | undefined = node;
-  while (
-    (childNextSibling === undefined || childNextSibling === null) &&
-    parentNode !== undefined &&
-    parentNode !== null
-  ) {
-    childNextSibling = parentNode?.nextSibling;
-    parentNode = parentNode?.parent;
+  return true;
+}
+
+function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
+  function getChildNextSibling(node: TSNode | null): TSNode | null {
+    if (!node) return null;
+
+    let childNextSibling = node?.child(idx + 1);
+    let parentNode: TSNode | null | undefined = node;
+    while (
+      (childNextSibling === undefined || childNextSibling === null) &&
+      parentNode !== undefined &&
+      parentNode !== null
+    ) {
+      childNextSibling = parentNode?.nextSibling;
+      parentNode = parentNode?.parent;
+    }
+
+    return childNextSibling;
   }
+
+  const node = path.getNode();
+  let childNextSibling = getChildNextSibling(node);
+  const child = node?.child(idx);
+  let nodeDoc = path.call(printFn, "children", idx);
 
   if (slurpedNodes.includes(child?.id ?? -1)) {
     return "";
   }
 
-  // let nodeDoc = path.call(printFn, "children", idx);
-  // let testNextSlurp = true;
-  // while (testNextSlurp) {
-  //   if (
-  //     !slurpedNodes.includes(childNextSibling?.id ?? -1) &&
-  //     (SEPARATORS.includes(childNextSibling?.type ?? "") ||
-  //       (childNextSibling?.type === "kEndDot" && child?.type === "kEnd") ||
-  //       (childNextSibling?.type === "comment" &&
-  //         childNextSibling.startPosition.row === child?.startPosition.row))
-  //   ) {
-  //     slurpedNodes.push(childNextSibling?.id ?? -100);
-  //     if (SEPARATORS.includes(childNextSibling?.type ?? "")) {
-  //       nodeDoc = [nodeDoc, childNextSibling?.text ?? ""];
-  //     } else if (
-  //       childNextSibling?.type === "comment" &&
-  //       childNextSibling.text.startsWith("//")
-  //     ) {
-  //       nodeDoc = [nodeDoc, line, childNextSibling?.text ?? "", hardline];
-  //     } else {
-  //       nodeDoc = [
-  //         nodeDoc,
-  //         line,
-  //         childNextSibling?.text ?? "",
-  //         ifBreak("", line),
-  //       ];
-  //     }
-  //     childNextSibling = childNextSibling?.nextSibling;
-
-  //   } else {
-  //     testNextSlurp = false;
-  //   }
-  // }
-  // return nodeDoc;
-
-  let nodeDoc = path.call(printFn, "children", idx);
-
-  if (
-    (SEPARATORS.includes(childNextSibling?.type ?? "") &&
-      !slurpedNodes.includes(childNextSibling?.id ?? -1)) ||
-    (childNextSibling?.type === "kEndDot" && child?.type === "kEnd")
+  while (
+    !slurpedNodes.includes(childNextSibling?.id ?? -1) &&
+    (SEPARATORS.includes(childNextSibling?.type ?? "") ||
+      (childNextSibling?.type === "kEndDot" && child?.type === "kEnd") ||
+      (childNextSibling?.type === "comment" &&
+        childNextSibling.startPosition.row === child?.startPosition.row))
   ) {
-    slurpedNodes.push(childNextSibling?.id ?? -100);
-    nodeDoc = group([nodeDoc, childNextSibling?.text ?? "", line]);
-  }
-
-  if (
-    childNextSibling?.type === "comment" &&
-    childNextSibling.startPosition.row === child?.startPosition.row
-  ) {
-    slurpedNodes.push(childNextSibling?.id ?? -100);
-    nodeDoc = group([nodeDoc, line, childNextSibling?.text ?? ""]);
-    if (childNextSibling.text.startsWith("//")) {
-      nodeDoc = [nodeDoc, hardline];
-    } else {
-      nodeDoc = [nodeDoc, line];
+    if (
+      (SEPARATORS.includes(childNextSibling?.type ?? "") &&
+        !slurpedNodes.includes(childNextSibling?.id ?? -1)) ||
+      (childNextSibling?.type === "kEndDot" && child?.type === "kEnd")
+    ) {
+      slurpedNodes.push(childNextSibling?.id ?? -100);
+      nodeDoc = group([nodeDoc, childNextSibling?.text ?? "", line]);
+    } else if (
+      childNextSibling?.type === "comment" &&
+      childNextSibling.startPosition.row === child?.startPosition.row
+    ) {
+      slurpedNodes.push(childNextSibling?.id ?? -100);
+      if (childNextSibling.text.startsWith("//")) {
+        nodeDoc = group([
+          nodeDoc,
+          line,
+          lineSuffix(childNextSibling?.text ?? ""),
+        ]);
+      } else {
+        nodeDoc = group([nodeDoc, line, childNextSibling?.text ?? "", line]);
+      }
     }
+
+    childNextSibling = getChildNextSibling(childNextSibling);
   }
 
   return nodeDoc;
@@ -259,21 +258,21 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   (nodecollection[0] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
+    if (notEmptyNode(nodeItem)) {
       preGroup.push(nodeItem);
     }
   });
 
   (nodecollection[1] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
+    if (notEmptyNode(nodeItem)) {
       nameGroup.push(nodeItem);
     }
   });
 
   (nodecollection[3] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
+    if (notEmptyNode(nodeItem)) {
       postGroup.push(nodeItem);
     }
   });
@@ -292,9 +291,11 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 function printCagedItems(
   path: AstPath<TSNode>,
   printFn: PrintFn,
+  forceBreak = false,
   openinCage: string[],
   closingCage?: string[],
-  headerAndCageSeparator = softline,
+  beforeCageSeparator: Doc = softline,
+  afterCageSeparator: Doc = softline,
 ): Doc {
   const node = path.getNode();
   if (!node) return "";
@@ -330,7 +331,7 @@ function printCagedItems(
   let firstItem = true;
   (groupingIndexes[0] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
+    if (notEmptyNode(nodeItem)) {
       if (!firstItem) {
         headerGroup.push(line);
       }
@@ -339,26 +340,22 @@ function printCagedItems(
     }
   });
 
-  headerGroup.push(headerAndCageSeparator);
+  headerGroup.push(beforeCageSeparator);
 
   (groupingIndexes[1] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
+    if (notEmptyNode(nodeItem)) {
       headerGroup.push(nodeItem);
     }
   });
 
-  headerGroup.push(ifBreak(line, softline));
+  headerGroup.push(afterCageSeparator);
 
   (groupingIndexes[2] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
-      itemsGroup.push(softline);
-      if (Array.isArray(nodeItem)) {
-        itemsGroup.push(join(softline, nodeItem));
-      } else {
-        itemsGroup.push(nodeItem);
-      }
+    if (notEmptyNode(nodeItem)) {
+      itemsGroup.push(forceBreak ? hardline : softline);
+      itemsGroup.push(nodeItem);
     }
   });
 
@@ -366,7 +363,7 @@ function printCagedItems(
     firstItem = true;
     (groupingIndexes[3] ?? []).forEach((i) => {
       const nodeItem = pathCall(path, printFn, i);
-      if (nodeItem !== "") {
+      if (notEmptyNode(nodeItem)) {
         if (!firstItem) {
           closingGroup.push(line);
         }
@@ -377,8 +374,8 @@ function printCagedItems(
 
     (groupingIndexes[4] ?? []).forEach((i) => {
       const nodeItem = pathCall(path, printFn, i);
-      if (nodeItem !== "") {
-        closingGroup.push(line);
+      if (notEmptyNode(nodeItem)) {
+        closingGroup.push("line");
         closingGroup.push(nodeItem);
       }
     });
@@ -386,7 +383,7 @@ function printCagedItems(
 
   return group([
     group(headerGroup),
-    indent(itemsGroup),
+    indent(group(itemsGroup)),
     softline,
     group(closingGroup),
   ]);
@@ -401,6 +398,10 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       type: "field",
       fieldName: ["name"],
     },
+    {
+      type: "field",
+      fieldName: ["args"],
+    },
     { type: "remaining" },
   ];
 
@@ -414,7 +415,7 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   let firstItem = true;
   (groupingIndexes[0] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
+    if (notEmptyNode(nodeItem)) {
       if (!firstItem) {
         preGroupArr.push(line);
       }
@@ -424,19 +425,22 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   });
   preGroup = group(preGroupArr);
 
-  firstItem = true;
   (groupingIndexes[1] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
-      if (node.child(i)?.type === "declArgs") {
-        declArgsArr.push(nodeItem);
-      } else {
-        if (!firstItem) {
-          postGroupArr.push(line);
-        }
-        postGroupArr.push(nodeItem);
-        firstItem = false;
+    if (notEmptyNode(nodeItem)) {
+      declArgsArr.push(nodeItem);
+    }
+  });
+
+  firstItem = true;
+  (groupingIndexes[2] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (notEmptyNode(nodeItem)) {
+      if (!firstItem) {
+        postGroupArr.push(line);
       }
+      postGroupArr.push(nodeItem);
+      firstItem = false;
     }
   });
 
@@ -523,7 +527,7 @@ export function printNode(
         let firstItem = true;
         for (let i = 0; i < node.childCount; i++) {
           const nodeItem = pathCall(path, printFn, i);
-          if (nodeItem !== "") {
+          if (notEmptyNode(nodeItem)) {
             if (!firstItem) {
               retDoc.push(line);
             }
@@ -541,37 +545,51 @@ export function printNode(
         break;
       }
       case "declVars": {
-        retDoc = printCagedItems(path, printFn, ["kVar"]);
+        retDoc = printCagedItems(path, printFn, true, ["kVar"]);
         break;
       }
+      case "declTypes": {
+        retDoc = printCagedItems(path, printFn, true, ["kType"]);
+        break;
+      }
+      case "declEnum":
       case "declArgs": {
-        retDoc = printCagedItems(path, printFn, ["("], [")"]);
+        retDoc = printCagedItems(path, printFn, false, ["("], [")"]);
         break;
       }
       case "declProc": {
         retDoc = printDeclProc(path, printFn);
         break;
       }
+      case "declType":
       case "declVar":
       case "declArg": {
         retDoc = printNameWithType(path, printFn);
         break;
       }
       case "typerefTpl": {
-        retDoc = printCagedItems(path, printFn, ["kLt"], ["kGt"]);
+        retDoc = printCagedItems(path, printFn, false, ["kLt"], ["kGt"]);
         break;
       }
       case "typerefArgs": {
         for (let i = 0; i < node.childCount; i++) {
           const nodeItem = pathCall(path, printFn, i);
-          if (nodeItem !== "") {
+          if (notEmptyNode(nodeItem)) {
             retDoc.push(nodeItem);
           }
         }
         break;
       }
       case "block": {
-        retDoc = printCagedItems(path, printFn, ["kBegin"], ["kEnd"]);
+        retDoc = printCagedItems(
+          path,
+          printFn,
+          false,
+          ["kBegin"],
+          ["kEnd"],
+          softline,
+          line,
+        );
         break;
       }
       default: {
