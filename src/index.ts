@@ -116,6 +116,7 @@ type PrintFn = (path: AstPath<TSNode>) => Doc;
 
 function notEmptyNode(node: Doc): boolean {
   if (node === "") return false;
+  if (Array.isArray(node) && node.length === 0) return false;
   if (Array.isArray(node) && node.flat(5)[0] === "") return false;
 
   return true;
@@ -318,12 +319,14 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       typeIsDeclClass = typeIsDeclClass || node.child(i)?.type === "declClass";
       if (typeIsDeclClass) {
         headerGroup.push((nodeItem as Doc[])[0]);
+        const nodeItem1 = (nodeItem as Doc[][])[1];
+        const nodeItem3 = (nodeItem as Doc[][])[3];
         postGroup.push(
           group([
-            line,
-            (nodeItem as Doc[][])[1],
-            line,
-            (nodeItem as Doc[][])[3],
+            notEmptyNode(nodeItem1) ? line : "",
+            nodeItem1,
+            notEmptyNode(nodeItem3) ? line : "",
+            nodeItem3,
           ]),
         );
         endGroup = (nodeItem as Doc[])[2];
@@ -333,12 +336,26 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
+  const joinedPostGroup = [];
+  let firstItem = true;
+  for (let i = 0; i < postGroup.length; i++) {
+    const nodeItem = postGroup[i];
+    if (notEmptyNode(nodeItem)) {
+      if (!firstItem) {
+        joinedPostGroup.push(line);
+      }
+      joinedPostGroup.push(nodeItem);
+      firstItem = false;
+    }
+  }
+
   return group([
     group(join(line, preGroup)),
     preGroup.length > 0 ? line : "",
     group(headerGroup),
-    group(indent(join(line, postGroup))),
-    group([endGroup.length > 0 ? softline : "", endGroup]),
+    group(indent(joinedPostGroup)),
+    endGroup.length > 0 ? softline : "",
+    group(endGroup),
   ]);
 }
 
@@ -602,6 +619,46 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   );
 }
 
+function printBinaryExp(
+  path: AstPath<TSNode>,
+  printFn: PrintFn,
+  infix: string[],
+): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  const targetTypes: GroupMarker[] = [
+    { type: "node", excludeMarker: true, retryNode: true, markers: infix },
+    { type: "node", markers: infix },
+    { type: "remaining" },
+  ];
+
+  const leftGroup: Doc = [];
+  const rightGroup: Doc = [];
+
+  const nodecollection = buildGrouping(node, targetTypes);
+
+  (nodecollection[0] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      leftGroup.push(nodeItem);
+    }
+  });
+
+  (nodecollection[2] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      rightGroup.push(nodeItem);
+    }
+  });
+
+  return group([
+    group(join(line, leftGroup)),
+    pathCall(path, printFn, nodecollection[1][0]),
+    group(join(line, rightGroup)),
+  ]);
+}
+
 // ============================================================================
 // MAIN PRINTER FUNCTION
 // ============================================================================
@@ -617,6 +674,7 @@ export function printNode(
   let retDoc: Doc = [];
 
   if (!node?.type) retDoc = "";
+  else if (slurpedNodes.includes(node.id)) retDoc = "";
   else if (["kDot", "kHat", "kAt"].includes(node.type)) retDoc = node.text;
   else if (["kGt", "kLt"].includes(node.type)) {
     if (["exprBinary", "operatorName"].includes(node.parent?.type ?? "")) {
@@ -696,6 +754,52 @@ export function printNode(
       case "library":
       case "unit": {
         retDoc = printModule(path, printFn);
+        break;
+      }
+      case "exprBinary": {
+        retDoc = printBinaryExp(path, printFn, [
+          "kLt",
+          "kLt",
+          "kEq",
+          "kNeq",
+          "kGt",
+          "kLte",
+          "kGte",
+          "kIn",
+          "kIs",
+          "kAdd",
+          "kSub",
+          "kOr",
+          "kXor",
+          "kMul",
+          "kFdiv",
+          "kDiv",
+          "kMod",
+          "kAnd",
+          "kShl",
+          "kShr",
+        ]);
+        break;
+      }
+
+      case "exprUnary": {
+        retDoc = printBinaryExp(path, printFn, [
+          "kNot",
+          "kAdd",
+          "kSub",
+          "kAt",
+          "kHat",
+        ]);
+        break;
+      }
+      case "assignment": {
+        retDoc = printBinaryExp(path, printFn, [
+          "kAssign",
+          "kAssignAdd",
+          "kAssignSub",
+          "kAssignMul",
+          "kAssignDiv",
+        ]);
         break;
       }
       case "declSection": {
