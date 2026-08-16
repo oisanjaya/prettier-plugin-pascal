@@ -437,7 +437,7 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     const nodeItem = pathCall(path, printFn, i);
     if (notEmptyNode(nodeItem)) {
       if (!firstItem) {
-        postGroupArr.push(line);
+        postGroupArr.push(softline);
       }
       postGroupArr.push(nodeItem);
       firstItem = false;
@@ -448,7 +448,7 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     group([
       preGroup,
       declArgsArr,
-      postGroupArr.length > 0 ? line : "",
+      postGroupArr.length > 0 ? softline : "",
       group(postGroupArr),
     ]),
   );
