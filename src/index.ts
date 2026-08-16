@@ -536,15 +536,10 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
-  firstItem = true;
   (groupingIndexes[1] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (notEmptyNode(nodeItem)) {
-      if (!firstItem) {
-        sectionsGroup.push(line);
-      }
       sectionsGroup.push(nodeItem);
-      firstItem = false;
     }
   });
 
@@ -575,7 +570,7 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     ]),
     softline,
     join(softline, endGroup),
-    softline,
+    postGroup.length > 0 ? softline : "",
     join(softline, postGroup),
   ]);
 }
@@ -758,6 +753,78 @@ function printBinaryExp(
     group(join(line, leftGroup)),
     pathCall(path, printFn, nodecollection[1][0]),
     group(join(line, rightGroup)),
+  ]);
+}
+
+function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+  const headerGroup: Doc[] = [];
+  const localGroup: Doc[] = [];
+  const postGroup: Doc[] = [];
+
+  const cageBoundaries: GroupMarker[] = [
+    {
+      type: "asLongField",
+      excludeMarker: true,
+      retryNode: true,
+      fieldName: ["header"],
+    },
+    {
+      type: "field",
+      excludeMarker: true,
+      retryNode: true,
+      fieldName: ["body"],
+    },
+    {
+      type: "remaining",
+    },
+  ];
+
+  const groupingIndexes = buildGrouping(node, cageBoundaries);
+
+  let firstItem = true;
+  (groupingIndexes[0] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (notEmptyNode(nodeItem)) {
+      if (!firstItem) {
+        headerGroup.push(line);
+      }
+      headerGroup.push(nodeItem);
+      firstItem = false;
+    }
+  });
+
+  firstItem = true;
+  (groupingIndexes[1] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (notEmptyNode(nodeItem)) {
+      if (!firstItem) {
+        localGroup.push(softline);
+      }
+      localGroup.push(nodeItem);
+      firstItem = false;
+    }
+  });
+
+  firstItem = true;
+  (groupingIndexes[2] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (notEmptyNode(nodeItem)) {
+      if (!firstItem) {
+        postGroup.push(line);
+      }
+      postGroup.push(nodeItem);
+      firstItem = false;
+    }
+  });
+
+  return group([
+    group(headerGroup),
+    localGroup.length > 0 ? softline : "",
+    group(localGroup),
+    postGroup.length > 0 ? softline : "",
+    join(softline, postGroup),
   ]);
 }
 
@@ -959,6 +1026,7 @@ export function printNode(
         retDoc = printDeclClass(path, printFn);
         break;
       }
+      case "declProcRef":
       case "declProc": {
         retDoc = printDeclProc(path, printFn);
         break;
@@ -982,6 +1050,10 @@ export function printNode(
             retDoc.push(nodeItem);
           }
         }
+        break;
+      }
+      case "defProc": {
+        retDoc = printDefProc(path, printFn);
         break;
       }
       case "block": {
