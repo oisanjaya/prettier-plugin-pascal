@@ -312,27 +312,10 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     pathCall(path, printFn, nodecollection[2][0]),
   ];
 
-  let typeIsDeclClass = false;
   (nodecollection[3] ?? []).forEach((i) => {
     const nodeItem: Doc = pathCall(path, printFn, i);
     if (notEmptyNode(nodeItem)) {
-      typeIsDeclClass = typeIsDeclClass || node.child(i)?.type === "declClass";
-      if (typeIsDeclClass) {
-        headerGroup.push((nodeItem as Doc[])[0]);
-        const nodeItem1 = (nodeItem as Doc[][])[1];
-        const nodeItem3 = (nodeItem as Doc[][])[3];
-        postGroup.push(
-          group([
-            notEmptyNode(nodeItem1) ? line : "",
-            nodeItem1,
-            notEmptyNode(nodeItem3) ? line : "",
-            nodeItem3,
-          ]),
-        );
-        endGroup = (nodeItem as Doc[])[2];
-      } else {
-        postGroup.push(nodeItem);
-      }
+      postGroup.push(nodeItem);
     }
   });
 
@@ -584,17 +567,17 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
-  return [headerGroup, sectionsGroup, endGroup, postGroup];
-
-  // group([
-  //   group(headerGroup),
-  //   sectionsGroup.length > 0 ? line : softline,
-  //   join(line, sectionsGroup),
-  //   softline,
-  //   join(softline, endGroup),
-  //   softline,
-  //   join(softline, postGroup),
-  // ]);
+  return group([
+    indent([
+      group(headerGroup),
+      sectionsGroup.length > 0 ? line : softline,
+      join(line, sectionsGroup),
+    ]),
+    softline,
+    join(softline, endGroup),
+    softline,
+    join(softline, postGroup),
+  ]);
 }
 
 function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
