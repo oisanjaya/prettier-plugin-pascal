@@ -362,7 +362,7 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 function printCagedItems(
   path: AstPath<TSNode>,
   printFn: PrintFn,
-  forceBreak = false,
+  forceBreak: boolean,
   openinCage: string[],
   closingCage?: string[],
   beforeCageSeparator: Doc = softline,
@@ -454,10 +454,53 @@ function printCagedItems(
 
   return group([
     group(headerGroup),
-    indent(group(itemsGroup)),
+    indent(group(itemsGroup, { shouldBreak: forceBreak })),
     closingGroup.length > 0 ? softline : "",
     group(closingGroup),
   ]);
+}
+
+function printUses(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  const cageBoundaries: GroupMarker[] = [
+    { type: "node", markers: ["kUses"] },
+    { type: "remaining" },
+  ];
+
+  const groupingIndexes = buildGrouping(node, cageBoundaries);
+
+  const headerGroup: Doc = [];
+  const itemsGroup: Doc = [];
+
+  let firstItem = true;
+  (groupingIndexes[0] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (notEmptyNode(nodeItem)) {
+      if (!firstItem) {
+        headerGroup.push(softline);
+      }
+      headerGroup.push(nodeItem);
+      firstItem = false;
+    }
+  });
+
+  headerGroup.push(softline);
+
+  firstItem = true;
+  (groupingIndexes[1] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (notEmptyNode(nodeItem)) {
+      if (firstItem) {
+        itemsGroup.push(hardline);
+      }
+      firstItem = false;
+      itemsGroup.push(nodeItem);
+    }
+  });
+
+  return group([group(headerGroup), indent(itemsGroup)]);
 }
 
 function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
@@ -552,6 +595,82 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   //   softline,
   //   join(softline, postGroup),
   // ]);
+}
+
+function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  const targetTypes: GroupMarker[] = [
+    {
+      type: "node",
+      markers: ["kThen"],
+    },
+    {
+      type: "node",
+      excludeMarker: true,
+      retryNode: true,
+      markers: ["kElse"],
+    },
+    {
+      type: "node",
+      markers: ["kElse"],
+    },
+    {
+      type: "asLongField",
+      fieldName: ["else"],
+      excludeMarker: true,
+      retryNode: true,
+    },
+    { type: "remaining" },
+  ];
+
+  const nodecollection = buildGrouping(node, targetTypes);
+
+  const ifGroup: Doc = [];
+  const thenGroup: Doc = [];
+  const elseGroup: Doc = [];
+  const postGroup: Doc = [];
+
+  (nodecollection[0] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      ifGroup.push(nodeItem);
+    }
+  });
+
+  (nodecollection[1] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      thenGroup.push(nodeItem);
+    }
+  });
+
+  (nodecollection[3] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      elseGroup.push(nodeItem);
+    }
+  });
+
+  (nodecollection[4] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      postGroup.push(nodeItem);
+    }
+  });
+
+  return group([
+    group(join(line, ifGroup)),
+    line,
+    group(join(line, thenGroup)),
+    line,
+    pathCall(path, printFn, nodecollection[2][0]),
+    line,
+    group(join(line, elseGroup)),
+    postGroup.length > 0 ? line : "",
+    group(join(line, postGroup)),
+  ]);
 }
 
 function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
@@ -802,6 +921,25 @@ export function printNode(
         ]);
         break;
       }
+      case "ifElse": {
+        retDoc = printIfElse(path, printFn);
+        break;
+      }
+      case "exprArgs": {
+        let firstItem = true;
+        for (let i = 0; i < node.childCount; i++) {
+          const nodeItem = pathCall(path, printFn, i);
+          if (notEmptyNode(nodeItem)) {
+            if (!firstItem) {
+              retDoc.push(softline);
+            }
+            firstItem = false;
+            retDoc.push(nodeItem);
+          }
+        }
+
+        break;
+      }
       case "declSection": {
         retDoc = printCagedItems(path, printFn, true, [
           "kStrict",
@@ -820,6 +958,15 @@ export function printNode(
         retDoc = printCagedItems(path, printFn, true, ["kType"]);
         break;
       }
+      case "declUses": {
+        retDoc = printUses(path, printFn);
+        break;
+      }
+      case "exprBrackets": {
+        retDoc = printCagedItems(path, printFn, false, ["["], ["]"]);
+        break;
+      }
+      case "exprCall":
       case "declEnum":
       case "declArgs": {
         retDoc = printCagedItems(path, printFn, false, ["("], [")"]);
@@ -858,7 +1005,7 @@ export function printNode(
         retDoc = printCagedItems(
           path,
           printFn,
-          false,
+          true,
           ["kBegin"],
           ["kEnd"],
           softline,
