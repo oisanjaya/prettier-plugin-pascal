@@ -114,30 +114,30 @@ export const options: Options = {};
 
 type PrintFn = (path: AstPath<TSNode>) => Doc;
 
-function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
-  function getChildNextSibling(node: TSNode | null): TSNode | null {
-    if (!node) return null;
+function getNextNodeInTree(node: TSNode | null | undefined): TSNode | null {
+  if (!node) return null;
 
-    let childNextSibling = node?.child(idx + 1);
-    let parentNode: TSNode | null | undefined = node;
-    while (
-      (childNextSibling === undefined || childNextSibling === null) &&
-      parentNode !== undefined &&
-      parentNode !== null
-    ) {
-      childNextSibling = parentNode?.nextSibling;
-      parentNode = parentNode?.parent;
-    }
-
-    return childNextSibling;
+  let nodeNextSibling = node?.nextSibling;
+  let parentNode: TSNode | null | undefined = node;
+  while (
+    (nodeNextSibling === undefined || nodeNextSibling === null) &&
+    parentNode !== undefined &&
+    parentNode !== null
+  ) {
+    nodeNextSibling = parentNode?.nextSibling;
+    parentNode = parentNode?.parent;
   }
 
+  return nodeNextSibling;
+}
+
+function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
   const node = path.getNode();
-  let childNextSibling = getChildNextSibling(node);
   const child = node?.child(idx);
+  let childNextSibling = getNextNodeInTree(child);
   let nodeDoc = path.call(printFn, "children", idx);
 
-  if (slurpedNodes.includes(child?.id ?? -1)) {
+  if (slurpedNodes.includes(child?.id ?? -1) || nodeDoc === "") {
     return "";
   }
 
@@ -171,7 +171,7 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
       }
     }
 
-    childNextSibling = getChildNextSibling(childNextSibling);
+    childNextSibling = getNextNodeInTree(childNextSibling);
   }
 
   return nodeDoc;
