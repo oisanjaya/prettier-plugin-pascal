@@ -449,12 +449,16 @@ function printCagedItems(
   }
 }
 
-function printUses(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+function printHangingList(
+  path: AstPath<TSNode>,
+  printFn: PrintFn,
+  headerMarkers: string[],
+): Doc {
   const node = path.getNode();
   if (!node) return "";
 
   const cageBoundaries: GroupMarker[] = [
-    { type: "node", markers: ["kUses"] },
+    { type: "node", markers: headerMarkers },
     { type: "until-end" },
   ];
 
@@ -738,7 +742,7 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       line,
       group(join(line, thenGroup)),
       elseGroup.length > 0 ? line : "",
-      pathCall(path, printFn, nodeGroups[2][0]),
+      elseGroup.length > 0 ? pathCall(path, printFn, nodeGroups[2][0]) : "",
       elseGroup.length > 0 ? line : "",
       group(join(line, elseGroup)),
       postGroup.length > 0 ? line : "",
@@ -1377,6 +1381,7 @@ export function printNode(
         retDoc = printCaseCase(path, printFn);
         break;
       }
+      case "if":
       case "ifElse": {
         retDoc = printIfElse(path, printFn);
         break;
@@ -1422,6 +1427,10 @@ export function printNode(
         ]);
         break;
       }
+      case "declConsts": {
+        retDoc = printCagedItems(path, printFn, true, ["kConst"]);
+        break;
+      }
       case "declVars": {
         retDoc = printCagedItems(path, printFn, true, ["kVar"]);
         break;
@@ -1431,7 +1440,15 @@ export function printNode(
         break;
       }
       case "declUses": {
-        retDoc = printUses(path, printFn);
+        retDoc = printHangingList(path, printFn, ["kUses"]);
+        break;
+      }
+      case "declLabels": {
+        retDoc = printHangingList(path, printFn, ["kLabel"]);
+        break;
+      }
+      case "declExports": {
+        retDoc = printCagedItems(path, printFn, true, ["kExports"]);
         break;
       }
       case "exprBrackets": {
@@ -1490,10 +1507,10 @@ export function printNode(
         );
         break;
       }
+      case "declExport":
       case "raise":
       case "label":
-      case "goto":
-      case "declLabels": {
+      case "goto": {
         let firstItem = true;
         for (let i = 0; i < node.childCount; i++) {
           const nodeItem = pathCall(path, printFn, i);
@@ -1519,6 +1536,8 @@ export function printNode(
         retDoc = printDeclArray(path, printFn);
         break;
       }
+      case "defaultValue":
+      case "declConst":
       case "moduleName":
       case "typerefArgs":
       case "exprParens":
