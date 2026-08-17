@@ -745,6 +745,47 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 }
 
+function printWhile(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  const targetTypes: GroupMarker[] = [
+    {
+      type: "node",
+      markers: ["kDo"],
+    },
+    { type: "until-end" },
+  ];
+
+  const nodeGroups = buildGrouping(node, targetTypes);
+
+  const whileGroup: Doc = [];
+  const postGroup: Doc = [];
+
+  let firstItem = true;
+  nodeGroups[0].forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (!firstItem) whileGroup.push(line);
+      firstItem = false;
+      whileGroup.push(nodeItem);
+    }
+  });
+
+  (nodeGroups[1] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      postGroup.push(nodeItem);
+    }
+  });
+
+  if (whileGroup.length > 0 && postGroup.length > 0) {
+    return group([group(whileGroup), line, group(postGroup)]);
+  } else {
+    return "";
+  }
+}
+
 function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
@@ -959,6 +1000,8 @@ export function printNode(
     } else {
       retDoc = node.text;
     }
+  } else if (node.type === "kIn" && (node.parent?.type ?? "") === "foreach") {
+    retDoc = node.text;
   } else if (
     [
       "kEq",
@@ -1078,6 +1121,26 @@ export function printNode(
           "kAssignMul",
           "kAssignDiv",
         ]);
+        break;
+      }
+      case "for":
+      case "for":
+      case "foreach":
+      case "with":
+      case "while": {
+        retDoc = printWhile(path, printFn);
+        break;
+      }
+      case "repeat": {
+        retDoc = printCagedItems(
+          path,
+          printFn,
+          true,
+          ["kRepeat"],
+          ["kUntil"],
+          softline,
+          line,
+        );
         break;
       }
       case "ifElse": {
