@@ -146,7 +146,9 @@ export const options: Options = {};
 
 type PrintFn = (path: AstPath<TSNode>) => Doc;
 
-function getNextNodeInTraversal(node: TSNode | null | undefined): TSNode | null {
+function getNextNodeInTraversal(
+  node: TSNode | null | undefined,
+): TSNode | null {
   if (!node) return null;
 
   let nodeNextSibling = node?.nextSibling;
@@ -228,9 +230,7 @@ function buildGrouping(node: TSNode, targetTypes: GroupMarker[]) {
       (currentTargetType.type === "node" &&
         currentTargetType.markers.includes(child?.type ?? "")) ||
       (currentTargetType.type === "field" &&
-        currentTargetType.fieldName.includes(
-          childFieldName,
-        )) ||
+        currentTargetType.fieldName.includes(childFieldName)) ||
       (currentTargetType.type === "until-field-changes" &&
         currentTargetType.fieldNames.includes(lastChildFieldName ?? "") &&
         !currentTargetType.fieldNames.includes(childFieldName))
@@ -1552,6 +1552,7 @@ export function printNode(
         retDoc = printCagedItems(path, printFn, true, ["kExports"]);
         break;
       }
+      case "declPropArgs":
       case "exprBrackets": {
         retDoc = printCagedItems(path, printFn, false, ["["], ["]"]);
         break;
@@ -1590,6 +1591,7 @@ export function printNode(
         retDoc = printDeclProcRef(path, printFn);
         break;
       }
+      case "genericArg":
       case "declProp":
       case "declField":
       case "declType":
@@ -1627,6 +1629,7 @@ export function printNode(
         );
         break;
       }
+      case "typeref":
       case "exprIf":
       case "declSet":
       case "declExport":
@@ -1663,21 +1666,24 @@ export function printNode(
         retDoc = join(softline, path.map(printFn, "children"));
         break;
       }
-      case "exprSubscript":
-      case "exprTpl":
-      case "guid":
       case "caseLabel":
+      case "declConst":
       case "declEnumValue":
       case "declString":
       case "defaultValue":
-      case "declConst":
-      case "moduleName":
-      case "typerefArgs":
-      case "exprParens":
-      case "typerefPtr":
       case "exprDot":
+      case "exprParens":
+      case "exprSubscript":
+      case "exprTpl":
+      case "guid":
+      case "moduleName":
+      case "statement":
       case "statements":
-      case "statement": {
+      case "type":
+      case "typerefArgs":
+      case "typerefDot":
+      case "typerefPtr":
+      case "typerefTpl": {
         const retArr = [];
         for (let i = 0; i < node.childCount; i++) {
           const pathCallRes = pathCall(path, printFn, i);
@@ -1714,7 +1720,7 @@ export function printNode(
         if (process.env.DEBUG_PASCAL_PRINTER) {
           console.warn(`Fallback printer: ${node.type}`);
         }
-        
+
         const ret = join(line, path.map(printFn, "children"));
         retDoc = ret.length === 0 ? node.text || "" : ret;
         break;
