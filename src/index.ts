@@ -178,14 +178,14 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
 }
 
 function buildGrouping(node: TSNode, targetTypes: GroupMarker[]) {
-  const nodecollection: number[][] = [[]];
-  let childState = 0;
+  const groups: number[][] = [[]];
+  let groupIndex = 0;
   let lastChildFieldName: string | null = null;
 
   for (let i = 0; i < node?.childCount; i++) {
     const child = node.child(i);
 
-    const currentTargetType = targetTypes[childState];
+    const currentTargetType = targetTypes[groupIndex];
 
     if (
       (currentTargetType.type === "node" &&
@@ -202,7 +202,7 @@ function buildGrouping(node: TSNode, targetTypes: GroupMarker[]) {
         currentTargetType.excludeMarker === undefined ||
         currentTargetType.excludeMarker === false
       )
-        nodecollection[childState].push(i);
+        groups[groupIndex].push(i);
 
       if (
         currentTargetType.retryNode !== undefined &&
@@ -210,16 +210,16 @@ function buildGrouping(node: TSNode, targetTypes: GroupMarker[]) {
       )
         i--;
 
-      childState++;
-      nodecollection.push([]);
+      groupIndex++;
+      groups.push([]);
     } else {
-      nodecollection[childState].push(i);
+      groups[groupIndex].push(i);
     }
 
     lastChildFieldName = node.fieldNameForChild(i);
   }
 
-  return nodecollection;
+  return groups;
 }
 
 function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
@@ -234,16 +234,16 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const headerGroup: Doc = [];
   const contentsGroup: Doc = [];
 
-  const nodecollection = buildGrouping(node, targetTypes);
+  const nodeGroups = buildGrouping(node, targetTypes);
 
-  nodecollection[0].forEach((i) => {
+  nodeGroups[0].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       headerGroup.push(nodeItem);
     }
   });
 
-  nodecollection[1].forEach((i) => {
+  nodeGroups[1].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       contentsGroup.push(nodeItem);
@@ -282,21 +282,21 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     { type: "remaining" },
   ];
 
-  const nodecollection = buildGrouping(node, targetTypes);
+  const nodeGroups = buildGrouping(node, targetTypes);
 
   const preGroup: Doc = [];
   const nameGroup: Doc = [];
   let endGroup: Doc = [];
   const postGroup: Doc = [];
 
-  (nodecollection[0] ?? []).forEach((i) => {
+  (nodeGroups[0] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       preGroup.push(nodeItem);
     }
   });
 
-  nodecollection[1].forEach((i) => {
+  nodeGroups[1].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       nameGroup.push(nodeItem);
@@ -305,10 +305,10 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const headerGroup = [
     join(softline, nameGroup),
-    pathCall(path, printFn, nodecollection[2][0]),
+    pathCall(path, printFn, nodeGroups[2][0]),
   ];
 
-  (nodecollection[3] ?? []).forEach((i) => {
+  (nodeGroups[3] ?? []).forEach((i) => {
     const nodeItem: Doc = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       postGroup.push(nodeItem);
@@ -613,35 +613,35 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     { type: "remaining" },
   ];
 
-  const nodecollection = buildGrouping(node, targetTypes);
+  const nodeGroups = buildGrouping(node, targetTypes);
 
   const ifGroup: Doc = [];
   const thenGroup: Doc = [];
   const elseGroup: Doc = [];
   const postGroup: Doc = [];
 
-  nodecollection[0].forEach((i) => {
+  nodeGroups[0].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       ifGroup.push(nodeItem);
     }
   });
 
-  nodecollection[1].forEach((i) => {
+  nodeGroups[1].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       thenGroup.push(nodeItem);
     }
   });
 
-  (nodecollection[3] ?? []).forEach((i) => {
+  (nodeGroups[3] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       elseGroup.push(nodeItem);
     }
   });
 
-  (nodecollection[4] ?? []).forEach((i) => {
+  (nodeGroups[4] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       postGroup.push(nodeItem);
@@ -654,7 +654,7 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       line,
       group(join(line, thenGroup)),
       elseGroup.length > 0 ? line : "",
-      pathCall(path, printFn, nodecollection[2][0]),
+      pathCall(path, printFn, nodeGroups[2][0]),
       elseGroup.length > 0 ? line : "",
       group(join(line, elseGroup)),
       postGroup.length > 0 ? line : "",
@@ -752,16 +752,16 @@ function printBinaryExp(
   const leftGroup: Doc = [];
   const rightGroup: Doc = [];
 
-  const nodecollection = buildGrouping(node, targetTypes);
+  const nodeGroups = buildGrouping(node, targetTypes);
 
-  nodecollection[0].forEach((i) => {
+  nodeGroups[0].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       leftGroup.push(nodeItem);
     }
   });
 
-  (nodecollection[2] ?? []).forEach((i) => {
+  (nodeGroups[2] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       rightGroup.push(nodeItem);
@@ -771,7 +771,7 @@ function printBinaryExp(
   if (leftGroup.length > 0) {
     return group([
       group(join(line, leftGroup)),
-      pathCall(path, printFn, nodecollection[1][0]),
+      pathCall(path, printFn, nodeGroups[1][0]),
       group(join(line, rightGroup)),
     ]);
   } else {
