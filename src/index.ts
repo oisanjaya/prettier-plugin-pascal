@@ -786,6 +786,154 @@ function printWhile(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 }
 
+function printCaseCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  const targetTypes: GroupMarker[] = [
+    {
+      type: "node",
+      markers: ["caseLabel"],
+    },
+    { type: "until-end" },
+  ];
+
+  const nodeGroups = buildGrouping(node, targetTypes);
+
+  const preGroup: Doc = [];
+  const postGroup: Doc = [];
+
+  let firstItem = true;
+  (nodeGroups[0] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (!firstItem) preGroup.push(line);
+      firstItem = false;
+      preGroup.push(nodeItem);
+    }
+  });
+
+  firstItem = true;
+  (nodeGroups[1] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (!firstItem) postGroup.push(line);
+      firstItem = false;
+      postGroup.push(nodeItem);
+    }
+  });
+
+  if (preGroup.length > 0 && postGroup.length > 0) {
+    return group([
+      group(preGroup),
+      indent(group([ifBreak(line, ""), postGroup])),
+    ]);
+  } else {
+    return "";
+  }
+}
+
+function printCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  const cageBoundaries: GroupMarker[] = [
+    {
+      type: "node",
+      excludeMarker: true,
+      retryNode: true,
+      markers: ["kOf"],
+    },
+    { type: "node", markers: ["kOf"] },
+    {
+      type: "node",
+      excludeMarker: true,
+      retryNode: true,
+      markers: ["kEnd"],
+    },
+    { type: "node", markers: ["kEnd"] },
+    { type: "until-end" },
+  ];
+
+  const groupingIndexes = buildGrouping(node, cageBoundaries);
+
+  const headerGroup: Doc = [];
+  const itemsGroup: Doc = [];
+  const closingGroup: Doc = [];
+
+  let firstItem = true;
+  groupingIndexes[0].forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (!firstItem) {
+        headerGroup.push(line);
+      }
+      headerGroup.push(nodeItem);
+      firstItem = false;
+    }
+  });
+
+  groupingIndexes[1].forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      headerGroup.push(line);
+      headerGroup.push(nodeItem);
+      headerGroup.push(line);
+    }
+  });
+
+  groupingIndexes[2].forEach((i) => {
+    if (["kElse", "kOtherwise"].includes(node.child(i)?.type ?? "")) {
+      const elseStatement = pathCall(path, printFn, i + 1);
+      slurpedNodes.push(node.child(i)?.nextSibling?.id ?? -100);
+      itemsGroup.push(hardline);
+      itemsGroup.push(
+        group([
+          group(node.child(i)?.text ?? ""),
+          indent(group([line, elseStatement])),
+        ]),
+      );
+    } else {
+      const nodeItem = pathCall(path, printFn, i);
+      if (nodeItem !== "") {
+        itemsGroup.push(hardline);
+        itemsGroup.push(nodeItem);
+      }
+    }
+  });
+
+  firstItem = true;
+  (groupingIndexes[3] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (!firstItem) {
+        closingGroup.push(line);
+      }
+      firstItem = false;
+      closingGroup.push(nodeItem);
+    }
+  });
+
+  (groupingIndexes[4] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      closingGroup.push(line);
+      closingGroup.push(nodeItem);
+    }
+  });
+
+  if (headerGroup.length > 0 && itemsGroup.length > 0) {
+    return group([
+      group(headerGroup),
+      indent(group(itemsGroup, { shouldBreak: true })),
+      closingGroup.length > 0 ? softline : "",
+      group(closingGroup),
+    ]);
+  } else {
+    return "";
+  }
+}
+
 function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
@@ -1141,6 +1289,14 @@ export function printNode(
           softline,
           line,
         );
+        break;
+      }
+      case "case": {
+        retDoc = printCase(path, printFn);
+        break;
+      }
+      case "caseCase": {
+        retDoc = printCaseCase(path, printFn);
         break;
       }
       case "ifElse": {
