@@ -39,15 +39,15 @@ interface FieldMarker {
   fieldName: string[];
 }
 
-interface AsLongFieldMarker {
-  type: "asLongField";
+interface UntilFieldChanges {
+  type: "until-field-changes";
   excludeMarker?: boolean;
   retryNode?: boolean;
   fieldName: string[];
 }
 
 type GroupMarker =
-  NodeMarker | FieldMarker | AsLongFieldMarker | { type: "remaining" };
+  NodeMarker | FieldMarker | UntilFieldChanges | { type: "until-end" };
 
 const SEPARATORS = [",", ";", ":"];
 
@@ -194,7 +194,7 @@ function buildGrouping(node: TSNode, targetTypes: GroupMarker[]) {
         currentTargetType.fieldName.includes(
           node.fieldNameForChild(i) ?? "",
         )) ||
-      (currentTargetType.type === "asLongField" &&
+      (currentTargetType.type === "until-field-changes" &&
         currentTargetType.fieldName.includes(lastChildFieldName ?? "") &&
         !currentTargetType.fieldName.includes(node.fieldNameForChild(i) ?? ""))
     ) {
@@ -228,7 +228,7 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const targetTypes: GroupMarker[] = [
     { type: "node", excludeMarker: true, retryNode: false, markers: [";"] },
-    { type: "remaining" },
+    { type: "until-end" },
   ];
 
   const headerGroup: Doc = [];
@@ -279,7 +279,7 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       markers: [":", "kEq"],
     },
     { type: "node", markers: [":", "kEq"] },
-    { type: "remaining" },
+    { type: "until-end" },
   ];
 
   const nodeGroups = buildGrouping(node, targetTypes);
@@ -374,7 +374,7 @@ function printCagedItems(
     cageBoundaries.push({ type: "node", markers: closingCage });
   }
 
-  cageBoundaries.push({ type: "remaining" });
+  cageBoundaries.push({ type: "until-end" });
 
   const groupingIndexes = buildGrouping(node, cageBoundaries);
 
@@ -451,7 +451,7 @@ function printUses(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const cageBoundaries: GroupMarker[] = [
     { type: "node", markers: ["kUses"] },
-    { type: "remaining" },
+    { type: "until-end" },
   ];
 
   const groupingIndexes = buildGrouping(node, cageBoundaries);
@@ -502,7 +502,7 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const cageBoundaries: GroupMarker[] = [
     {
-      type: "asLongField",
+      type: "until-field-changes",
       excludeMarker: true,
       retryNode: true,
       fieldName: ["parent"],
@@ -518,7 +518,7 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       markers: ["kEnd"],
     },
     {
-      type: "remaining",
+      type: "until-end",
     },
   ];
 
@@ -605,12 +605,12 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       markers: ["kElse"],
     },
     {
-      type: "asLongField",
+      type: "until-field-changes",
       fieldName: ["else"],
       excludeMarker: true,
       retryNode: true,
     },
-    { type: "remaining" },
+    { type: "until-end" },
   ];
 
   const nodeGroups = buildGrouping(node, targetTypes);
@@ -678,7 +678,7 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       type: "field",
       fieldName: ["args"],
     },
-    { type: "remaining" },
+    { type: "until-end" },
   ];
 
   const groupingIndexes = buildGrouping(node, cageBoundaries);
@@ -746,7 +746,7 @@ function printBinaryExp(
   const targetTypes: GroupMarker[] = [
     { type: "node", excludeMarker: true, retryNode: true, markers: infix },
     { type: "node", markers: infix },
-    { type: "remaining" },
+    { type: "until-end" },
   ];
 
   const leftGroup: Doc = [];
@@ -788,7 +788,7 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const cageBoundaries: GroupMarker[] = [
     {
-      type: "asLongField",
+      type: "until-field-changes",
       excludeMarker: true,
       retryNode: true,
       fieldName: ["header"],
@@ -800,7 +800,7 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       fieldName: ["body"],
     },
     {
-      type: "remaining",
+      type: "until-end",
     },
   ];
 
