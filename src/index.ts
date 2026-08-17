@@ -1542,7 +1542,21 @@ export function printNode(
         retDoc = printCagedItems(path, printFn, false, ["("], [")"]);
         break;
       }
-      case "declIntf":
+      case "declHelper": {
+        retDoc = printCagedItems(path, printFn, true, ["typeref"], ["kEnd"]);
+        break;
+      }
+      case "declIntf": {
+        retDoc = printCagedItems(
+          path,
+          printFn,
+          true,
+          ["kDispInterface", "kInterface"],
+          ["kEnd"],
+        );
+        break;
+      }
+      case "declMetaClass":
       case "declClass": {
         retDoc = printDeclClass(path, printFn);
         break;
