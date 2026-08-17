@@ -43,16 +43,48 @@ interface UntilFieldChanges {
   type: "until-field-changes";
   excludeMarker?: boolean;
   retryNode?: boolean;
-  fieldName: string[];
+  fieldNames: string[];
 }
 
 type GroupMarker =
   NodeMarker | FieldMarker | UntilFieldChanges | { type: "until-end" };
 
 const SEPARATORS = [",", ";", ":"];
+const BINARY_OPERATORS = [
+  "kLt",
+  "kLt",
+  "kEq",
+  "kNeq",
+  "kGt",
+  "kLte",
+  "kGte",
+  "kIn",
+  "kIs",
+  "kAdd",
+  "kSub",
+  "kOr",
+  "kXor",
+  "kMul",
+  "kFdiv",
+  "kDiv",
+  "kMod",
+  "kAnd",
+  "kShl",
+  "kShr",
+  "kNotIn",
+  "kIsNot",
+];
+const UNARY_OPERATORS = ["kNot", "kAdd", "kSub", "kAt", "kHat"];
+const ASSIGNMENT_OPERATORS = [
+  "kAssign",
+  "kAssignAdd",
+  "kAssignSub",
+  "kAssignMul",
+  "kAssignDiv",
+];
 
 let parserInstance: Parser | null = null;
-const slurpedNodes: number[] = [];
+const slurpedNodes = new Set<number>();
 
 const getParser = async () => {
   if (!parserInstance) {
@@ -114,7 +146,7 @@ export const options: Options = {};
 
 type PrintFn = (path: AstPath<TSNode>) => Doc;
 
-function getNextNodeInTree(node: TSNode | null | undefined): TSNode | null {
+function getNextNodeInTraversal(node: TSNode | null | undefined): TSNode | null {
   if (!node) return null;
 
   let nodeNextSibling = node?.nextSibling;
@@ -134,15 +166,15 @@ function getNextNodeInTree(node: TSNode | null | undefined): TSNode | null {
 function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
   const node = path.getNode();
   const child = node?.child(idx);
-  let childNextSibling = getNextNodeInTree(child);
+  let childNextSibling = getNextNodeInTraversal(child);
   let nodeDoc = path.call(printFn, "children", idx);
 
-  if (slurpedNodes.includes(child?.id ?? -1) || nodeDoc === "") {
+  if (slurpedNodes.has(child?.id ?? -1) || nodeDoc === "") {
     return "";
   }
 
   while (
-    !slurpedNodes.includes(childNextSibling?.id ?? -1) &&
+    !slurpedNodes.has(childNextSibling?.id ?? -1) &&
     (SEPARATORS.includes(childNextSibling?.type ?? "") ||
       (childNextSibling?.type === "kEndDot" && child?.type === "kEnd") ||
       (childNextSibling?.type === "comment" &&
@@ -150,10 +182,10 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
   ) {
     if (
       (SEPARATORS.includes(childNextSibling?.type ?? "") &&
-        !slurpedNodes.includes(childNextSibling?.id ?? -1)) ||
+        !slurpedNodes.has(childNextSibling?.id ?? -1)) ||
       (childNextSibling?.type === "kEndDot" && child?.type === "kEnd")
     ) {
-      slurpedNodes.push(childNextSibling?.id ?? -100);
+      slurpedNodes.add(childNextSibling?.id ?? -100);
       nodeDoc = group([
         nodeDoc,
         childNextSibling?.text ?? "",
@@ -163,7 +195,7 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
       childNextSibling?.type === "comment" &&
       childNextSibling.startPosition.row === child?.startPosition.row
     ) {
-      slurpedNodes.push(childNextSibling?.id ?? -100);
+      slurpedNodes.add(childNextSibling?.id ?? -100);
       if (childNextSibling.text.startsWith("//")) {
         nodeDoc = group([
           nodeDoc,
@@ -175,7 +207,7 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
       }
     }
 
-    childNextSibling = getNextNodeInTree(childNextSibling);
+    childNextSibling = getNextNodeInTraversal(childNextSibling);
   }
 
   return nodeDoc;
@@ -187,6 +219,7 @@ function buildGrouping(node: TSNode, targetTypes: GroupMarker[]) {
   let lastChildFieldName: string | null = null;
 
   for (let i = 0; i < node?.childCount; i++) {
+    const childFieldName = node.fieldNameForChild(i) ?? "";
     const child = node.child(i);
 
     const currentTargetType = targetTypes[groupIndex];
@@ -196,11 +229,11 @@ function buildGrouping(node: TSNode, targetTypes: GroupMarker[]) {
         currentTargetType.markers.includes(child?.type ?? "")) ||
       (currentTargetType.type === "field" &&
         currentTargetType.fieldName.includes(
-          node.fieldNameForChild(i) ?? "",
+          childFieldName,
         )) ||
       (currentTargetType.type === "until-field-changes" &&
-        currentTargetType.fieldName.includes(lastChildFieldName ?? "") &&
-        !currentTargetType.fieldName.includes(node.fieldNameForChild(i) ?? ""))
+        currentTargetType.fieldNames.includes(lastChildFieldName ?? "") &&
+        !currentTargetType.fieldNames.includes(childFieldName))
     ) {
       if (
         currentTargetType.excludeMarker === undefined ||
@@ -220,7 +253,7 @@ function buildGrouping(node: TSNode, targetTypes: GroupMarker[]) {
       groups[groupIndex].push(i);
     }
 
-    lastChildFieldName = node.fieldNameForChild(i);
+    lastChildFieldName = childFieldName;
   }
 
   return groups;
@@ -593,7 +626,7 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       type: "until-field-changes",
       excludeMarker: true,
       retryNode: true,
-      fieldName: ["parent"],
+      fieldNames: ["parent"],
     },
     {
       type: "node",
@@ -697,7 +730,7 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     },
     {
       type: "until-field-changes",
-      fieldName: ["else"],
+      fieldNames: ["else"],
       excludeMarker: true,
       retryNode: true,
     },
@@ -1021,7 +1054,7 @@ function printCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   groupingIndexes[2].forEach((i) => {
     if (["kElse", "kOtherwise"].includes(node.child(i)?.type ?? "")) {
       const elseStatement = pathCall(path, printFn, i + 1);
-      slurpedNodes.push(node.child(i)?.nextSibling?.id ?? -100);
+      slurpedNodes.add(node.child(i)?.nextSibling?.id ?? -100);
       itemsGroup.push(hardline);
       itemsGroup.push(
         group([
@@ -1162,7 +1195,7 @@ function printDeclProcRef(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 }
 
-function printBinaryExp(
+function printExpression(
   path: AstPath<TSNode>,
   printFn: PrintFn,
   infix: string[],
@@ -1218,7 +1251,7 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       type: "until-field-changes",
       excludeMarker: true,
       retryNode: true,
-      fieldName: ["header"],
+      fieldNames: ["header"],
     },
     {
       type: "field",
@@ -1297,7 +1330,7 @@ export function printNode(
   let retDoc: Doc = [];
 
   if (!node?.type) retDoc = "";
-  else if (slurpedNodes.includes(node.id)) retDoc = "";
+  else if (slurpedNodes.has(node.id)) retDoc = "";
   else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
     retDoc = node.text;
   else if (["kGt", "kLt"].includes(node.type)) {
@@ -1383,53 +1416,40 @@ export function printNode(
         retDoc = printModule(path, printFn);
         break;
       }
-      case "exprBinary": {
-        retDoc = printBinaryExp(path, printFn, [
-          "kLt",
-          "kLt",
-          "kEq",
-          "kNeq",
-          "kGt",
-          "kLte",
-          "kGte",
-          "kIn",
-          "kIs",
-          "kAdd",
-          "kSub",
-          "kOr",
-          "kXor",
-          "kMul",
-          "kFdiv",
-          "kDiv",
-          "kMod",
-          "kAnd",
-          "kShl",
-          "kShr",
-        ]);
+      case "interface":
+      case "implementation":
+      case "initialization":
+      case "finalization": {
+        for (let i = 0; i < node.childCount; i++) {
+          if (
+            [
+              "kInterface",
+              "kImplementation",
+              "kInitialization",
+              "kFinalization",
+            ].includes(node.child(i)?.type ?? "")
+          ) {
+            retDoc.push([hardline, node.text, hardline]);
+          } else {
+            const nodeItem = pathCall(path, printFn, i);
+            if (nodeItem !== "") retDoc.push(nodeItem);
+          }
+        }
+        retDoc = group(retDoc);
         break;
       }
-
+      case "exprBinary": {
+        retDoc = printExpression(path, printFn, BINARY_OPERATORS);
+        break;
+      }
       case "exprUnary": {
-        retDoc = printBinaryExp(path, printFn, [
-          "kNot",
-          "kAdd",
-          "kSub",
-          "kAt",
-          "kHat",
-        ]);
+        retDoc = printExpression(path, printFn, UNARY_OPERATORS);
         break;
       }
       case "assignment": {
-        retDoc = printBinaryExp(path, printFn, [
-          "kAssign",
-          "kAssignAdd",
-          "kAssignSub",
-          "kAssignMul",
-          "kAssignDiv",
-        ]);
+        retDoc = printExpression(path, printFn, ASSIGNMENT_OPERATORS);
         break;
       }
-      case "for":
       case "for":
       case "foreach":
       case "with":
@@ -1561,6 +1581,7 @@ export function printNode(
         retDoc = printDeclClass(path, printFn);
         break;
       }
+      case "declProcFwd":
       case "declProc": {
         retDoc = printDeclProc(path, printFn);
         break;
@@ -1569,7 +1590,6 @@ export function printNode(
         retDoc = printDeclProcRef(path, printFn);
         break;
       }
-      case "declField":
       case "declProp":
       case "declField":
       case "declType":
@@ -1607,6 +1627,7 @@ export function printNode(
         );
         break;
       }
+      case "exprIf":
       case "declSet":
       case "declExport":
       case "declFile":
@@ -1638,6 +1659,12 @@ export function printNode(
         retDoc = printDeclArray(path, printFn);
         break;
       }
+      case "legacyFormat": {
+        retDoc = join(softline, path.map(printFn, "children"));
+        break;
+      }
+      case "exprSubscript":
+      case "exprTpl":
       case "guid":
       case "caseLabel":
       case "declEnumValue":
@@ -1684,6 +1711,10 @@ export function printNode(
         break;
       }
       default: {
+        if (process.env.DEBUG_PASCAL_PRINTER) {
+          console.warn(`Fallback printer: ${node.type}`);
+        }
+        
         const ret = join(line, path.map(printFn, "children"));
         retDoc = ret.length === 0 ? node.text || "" : ret;
         break;
