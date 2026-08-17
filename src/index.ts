@@ -18,7 +18,7 @@ const {
   softline,
   indent,
   ifBreak,
-  breakParent,
+  dedentToRoot,
   lineSuffix,
 } = prettier.doc.builders;
 
@@ -492,6 +492,86 @@ function printUses(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 }
 
+function printDeclArray(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  let nodeHasRange = false;
+  for (let i = 0; i < node.childCount; i++) {
+    if (node.child(i)?.type === "[") {
+      nodeHasRange = true;
+      break;
+    }
+  }
+
+  let nodeGroups: number[][];
+
+  if (nodeHasRange) {
+    const targetTypes: GroupMarker[] = [
+      {
+        type: "node",
+        markers: ["kArray"],
+      },
+      {
+        type: "node",
+        excludeMarker: true,
+        retryNode: true,
+        markers: ["kOf"],
+      },
+      { type: "until-end" },
+    ];
+    nodeGroups = buildGrouping(node, targetTypes);
+  } else {
+    const targetTypes: GroupMarker[] = [
+      {
+        type: "node",
+        markers: ["kArray"],
+      },
+      { type: "until-end" },
+    ];
+    nodeGroups = buildGrouping(node, targetTypes);
+    nodeGroups = [nodeGroups[0], [], nodeGroups[1]];
+  }
+
+  const preGroup: Doc = [];
+  const rangeGroup: Doc = [];
+  const postGroup: Doc = [];
+
+  let firstItem = true;
+  nodeGroups[0].forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (!firstItem) preGroup.push(line);
+      firstItem = false;
+      preGroup.push(nodeItem);
+    }
+  });
+
+  firstItem = true;
+  nodeGroups[1].forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (!firstItem) rangeGroup.push(softline);
+      firstItem = false;
+      rangeGroup.push(nodeItem);
+    }
+  });
+
+  nodeGroups[2].forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      postGroup.push(line);
+      postGroup.push(nodeItem);
+    }
+  });
+
+  if (nodeGroups.length > 0 && postGroup.length > 0) {
+    return group([preGroup, rangeGroup, postGroup]);
+  } else {
+    return "";
+  }
+}
+
 function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
@@ -871,7 +951,8 @@ export function printNode(
 
   if (!node?.type) retDoc = "";
   else if (slurpedNodes.includes(node.id)) retDoc = "";
-  else if (["kDot", "kHat", "kAt"].includes(node.type)) retDoc = node.text;
+  else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
+    retDoc = node.text;
   else if (["kGt", "kLt"].includes(node.type)) {
     if (["exprBinary", "operatorName"].includes(node.parent?.type ?? "")) {
       retDoc = [line, node.text, line];
@@ -1096,6 +1177,34 @@ export function printNode(
         );
         break;
       }
+      case "label":
+      case "goto":
+      case "declLabels": {
+        let firstItem = true;
+        for (let i = 0; i < node.childCount; i++) {
+          const nodeItem = pathCall(path, printFn, i);
+          if (nodeItem !== "") {
+            if (!firstItem) {
+              retDoc.push(line);
+            }
+            firstItem = false;
+            retDoc.push(nodeItem);
+          }
+        }
+
+        if (retDoc.length > 0)
+          if (node.type === "label") {
+            retDoc = dedentToRoot(group([line, retDoc], { shouldBreak: true }));
+          } else {
+            retDoc = group(retDoc);
+          }
+
+        break;
+      }
+      case "declArray": {
+        retDoc = printDeclArray(path, printFn);
+        break;
+      }
       case "moduleName":
       case "typerefArgs":
       case "exprParens":
@@ -1108,6 +1217,27 @@ export function printNode(
           if (pathCallRes !== "") retArr.push(pathCallRes);
         }
         if (retArr.length > 0) retDoc = group(join(softline, retArr));
+        break;
+      }
+      case "range": {
+        let firstItem = true;
+        for (let i = 0; i < node.childCount; i++) {
+          const nodeItem = pathCall(path, printFn, i);
+          if (nodeItem !== "") {
+            if (!firstItem) {
+              retDoc.push(softline);
+            }
+            firstItem = false;
+            retDoc.push(nodeItem);
+          }
+        }
+
+        if (retDoc.length > 0) retDoc = group(retDoc);
+
+        break;
+      }
+      case "literalString": {
+        retDoc = node.text;
         break;
       }
       default: {
