@@ -657,17 +657,20 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   });
 
   if (headerGroup.length > 0) {
-    return group([
-      indent([
-        group(headerGroup),
-        sectionsGroup.length > 0 ? line : softline,
-        join(line, sectionsGroup),
-      ]),
-      softline,
-      join(softline, endGroup),
-      postGroup.length > 0 ? softline : "",
-      join(softline, postGroup),
-    ]);
+    return group(
+      [
+        indent([
+          group(headerGroup),
+          sectionsGroup.length > 0 ? line : softline,
+          join(line, sectionsGroup),
+        ]),
+        softline,
+        join(softline, endGroup),
+        postGroup.length > 0 ? softline : "",
+        join(softline, postGroup),
+      ],
+      { shouldBreak: true },
+    );
   } else {
     return "";
   }
@@ -915,6 +918,57 @@ function printCaseCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 }
 
+function printDeclVariantClause(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  const targetTypes: GroupMarker[] = [
+    {
+      type: "node",
+      markers: ["caseLabel"],
+    },
+    { type: "until-end" },
+  ];
+
+  const nodeGroups = buildGrouping(node, targetTypes);
+
+  const preGroup: Doc = [];
+  const postGroup: Doc = [];
+
+  let firstItem = true;
+  (nodeGroups[0] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (!firstItem) preGroup.push(line);
+      firstItem = false;
+      preGroup.push(nodeItem);
+    }
+  });
+
+  firstItem = true;
+  (nodeGroups[1] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (
+        !firstItem &&
+        ![")", "declField", "declVariant"].includes(node.child(i)?.type ?? "")
+      )
+        postGroup.push(line);
+      firstItem = false;
+      postGroup.push(nodeItem);
+    }
+  });
+
+  if (preGroup.length > 0 && postGroup.length > 0) {
+    return group([
+      group(preGroup),
+      indent(group([ifBreak(line, ""), postGroup])),
+    ]);
+  } else {
+    return "";
+  }
+}
+
 function printCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
@@ -1081,6 +1135,28 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
         group(postGroupArr),
       ]),
     );
+  } else {
+    return "";
+  }
+}
+
+function printDeclProcRef(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  const retDoc: Doc = [];
+
+  for (let i = 0; i < node.childCount; i++) {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      retDoc.push(nodeItem);
+      if (!["kProcedure", "kFunction"].includes(node.child(i)?.type ?? ""))
+        retDoc.push(line);
+    }
+  }
+
+  if (retDoc.length > 0) {
+    return group(retDoc);
   } else {
     return "";
   }
@@ -1373,6 +1449,11 @@ export function printNode(
         );
         break;
       }
+      case "declVariantClause": {
+        retDoc = printDeclVariantClause(path, printFn);
+        break;
+      }
+      case "declVariant":
       case "case": {
         retDoc = printCase(path, printFn);
         break;
@@ -1461,15 +1542,20 @@ export function printNode(
         retDoc = printCagedItems(path, printFn, false, ["("], [")"]);
         break;
       }
+      case "declIntf":
       case "declClass": {
         retDoc = printDeclClass(path, printFn);
         break;
       }
-      case "declProcRef":
       case "declProc": {
         retDoc = printDeclProc(path, printFn);
         break;
       }
+      case "declProcRef": {
+        retDoc = printDeclProcRef(path, printFn);
+        break;
+      }
+      case "declField":
       case "declProp":
       case "declField":
       case "declType":
@@ -1507,7 +1593,9 @@ export function printNode(
         );
         break;
       }
+      case "declSet":
       case "declExport":
+      case "declFile":
       case "raise":
       case "label":
       case "goto": {
@@ -1536,6 +1624,10 @@ export function printNode(
         retDoc = printDeclArray(path, printFn);
         break;
       }
+      case "guid":
+      case "caseLabel":
+      case "declEnumValue":
+      case "declString":
       case "defaultValue":
       case "declConst":
       case "moduleName":
