@@ -154,7 +154,11 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
       (childNextSibling?.type === "kEndDot" && child?.type === "kEnd")
     ) {
       slurpedNodes.push(childNextSibling?.id ?? -100);
-      nodeDoc = group([nodeDoc, childNextSibling?.text ?? "", line]);
+      nodeDoc = group([
+        nodeDoc,
+        childNextSibling?.text ?? "",
+        node?.type === "exceptionHandler" ? "" : line,
+      ]);
     } else if (
       childNextSibling?.type === "comment" &&
       childNextSibling.startPosition.row === child?.startPosition.row
@@ -745,6 +749,80 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 }
 
+function printTry(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  let targetHandlerField = "except";
+  for (let i = 0; i < node.childCount; i++) {
+    if (node.fieldNameForChild(i) === "finally") {
+      targetHandlerField = "finally";
+      break;
+    }
+  }
+
+  const targetTypes: GroupMarker[] = [
+    {
+      type: "field",
+      excludeMarker: true,
+      retryNode: true,
+      fieldName: [targetHandlerField],
+    },
+    {
+      type: "node",
+      excludeMarker: true,
+      retryNode: true,
+      markers: ["kEnd"],
+    },
+    { type: "until-end" },
+  ];
+
+  const nodeGroups = buildGrouping(node, targetTypes);
+
+  const tryGroup: Doc = [];
+  const handlerGroup: Doc = [];
+  const postGroup: Doc = [];
+
+  let firstItem = true;
+  nodeGroups[0].forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (!firstItem) tryGroup.push(line);
+      firstItem = false;
+      tryGroup.push(nodeItem);
+    }
+  });
+
+  firstItem = true;
+  nodeGroups[1].forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      if (!firstItem) handlerGroup.push(line);
+      firstItem = false;
+      handlerGroup.push(nodeItem);
+    }
+  });
+
+  (nodeGroups[2] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      postGroup.push(nodeItem);
+    }
+  });
+
+  if (tryGroup.length > 0 && handlerGroup.length > 0 && postGroup.length > 0) {
+    return group([
+      indent(group(tryGroup, { shouldBreak: true })),
+      handlerGroup.length > 0 ? hardline : "",
+      indent(group(handlerGroup, { shouldBreak: true })),
+      line,
+      group(postGroup),
+    ]);
+  } else {
+    return "";
+  }
+}
+
 function printWhile(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
@@ -1303,6 +1381,22 @@ export function printNode(
         retDoc = printIfElse(path, printFn);
         break;
       }
+      case "try": {
+        retDoc = printTry(path, printFn);
+        break;
+      }
+      case "exceptionHandler": {
+        retDoc = printCagedItems(
+          path,
+          printFn,
+          true,
+          ["kDo"],
+          undefined,
+          line,
+          line,
+        );
+        break;
+      }
       case "exprArgs": {
         let firstItem = true;
         for (let i = 0; i < node.childCount; i++) {
@@ -1396,6 +1490,7 @@ export function printNode(
         );
         break;
       }
+      case "raise":
       case "label":
       case "goto":
       case "declLabels": {
@@ -1429,13 +1524,17 @@ export function printNode(
       case "exprParens":
       case "typerefPtr":
       case "exprDot":
+      case "statements":
       case "statement": {
         const retArr = [];
         for (let i = 0; i < node.childCount; i++) {
           const pathCallRes = pathCall(path, printFn, i);
           if (pathCallRes !== "") retArr.push(pathCallRes);
         }
-        if (retArr.length > 0) retDoc = group(join(softline, retArr));
+        if (retArr.length > 0)
+          retDoc = group(join(softline, retArr), {
+            shouldBreak: node.type === "statements",
+          });
         break;
       }
       case "range": {
