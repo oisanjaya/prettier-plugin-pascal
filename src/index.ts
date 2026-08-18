@@ -617,7 +617,7 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
 
-  const groups: Doc[][] = [[]];
+  const groups: Doc[][] = [[],[],[],[],[]];
   let groupingIndex = 0;
 
   for (let i = 0; i < node.childCount; i++) {
@@ -638,7 +638,6 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
             "kEnd",
           ].includes(child?.type ?? "")
         ) {
-          groups.push([]);
           groupingIndex++;
           i--;
         } else {
@@ -650,7 +649,6 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
         if (
           ["declSection", "declVariant", "kEnd"].includes(child?.type ?? "")
         ) {
-          groups.push([]);
           groupingIndex++;
           i--;
         } else {
@@ -660,7 +658,6 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       }
       case 2: {
         if (["declVariant", "kEnd"].includes(child?.type ?? "")) {
-          groups.push([]);
           groupingIndex++;
           i--;
         } else {
@@ -670,7 +667,6 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       }
       case 3: {
         if (["kEnd"].includes(child?.type ?? "")) {
-          groups.push([]);
           groupingIndex++;
           i--;
         } else {
@@ -1170,11 +1166,6 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       firstItem = false;
     }
   });
-
-  console.log({ preGroupArr: JSON.stringify(preGroupArr) });
-  console.log({ nameGroupArr: JSON.stringify(nameGroupArr) });
-  console.log({ declArgsArr: JSON.stringify(declArgsArr) });
-  console.log({ postGroupArr: JSON.stringify(postGroupArr) });
 
   if (preGroupArr.length > 0 || nameGroupArr.length > 0) {
     return indent(
