@@ -84,7 +84,7 @@ const ASSIGNMENT_OPERATORS = [
 ];
 
 let parserInstance: Parser | null = null;
-const slurpedNodes = new Set<number>();
+const slurpedNodesByTree = new Map<number, Set<number>>();
 
 const getParser = async () => {
   if (!parserInstance) {
@@ -146,6 +146,29 @@ export const options: Options = {};
 
 type PrintFn = (path: AstPath<TSNode>) => Doc;
 
+function getRootNode(node: TSNode): TSNode {
+  let root = node;
+
+  while (root.parent) {
+    root = root.parent;
+  }
+
+  return root;
+}
+
+function getSlurpedNodes(node: TSNode): Set<number> {
+  const root = getRootNode(node);
+
+  let slurpedNodes = slurpedNodesByTree.get(root.id);
+
+  if (!slurpedNodes) {
+    slurpedNodes = new Set<number>();
+    slurpedNodesByTree.set(root.id, slurpedNodes);
+  }
+  
+  return slurpedNodes;
+}
+
 function getNextNodeInTraversal(
   node: TSNode | null | undefined,
 ): TSNode | null {
@@ -167,7 +190,14 @@ function getNextNodeInTraversal(
 
 function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
   const node = path.getNode();
-  const child = node?.child(idx);
+
+  if (!node) {
+    return "";
+  }
+
+  const slurpedNodes = getSlurpedNodes(node);
+  const child = node.child(idx);
+
   let childNextSibling = getNextNodeInTraversal(child);
   let nodeDoc = path.call(printFn, "children", idx);
 
@@ -617,7 +647,7 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
 
-  const groups: Doc[][] = [[],[],[],[],[]];
+  const groups: Doc[][] = [[], [], [], [], []];
   let groupingIndex = 0;
 
   for (let i = 0; i < node.childCount; i++) {
@@ -1007,6 +1037,8 @@ function printCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
 
+  const slurpedNodes = getSlurpedNodes(node);
+
   const cageBoundaries: GroupMarker[] = [
     {
       type: "node",
@@ -1335,12 +1367,12 @@ export function printNode(
   const node = path.getNode();
   if (!node) return "";
 
+  const slurpedNodes = getSlurpedNodes(node);
+  
   let retDoc: Doc = [];
 
   if (!node?.type) retDoc = "";
   else if (slurpedNodes.has(node.id)) retDoc = "";
-  else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
-    retDoc = node.text;
   else if (
     [
       "kAdd",
@@ -1406,6 +1438,8 @@ export function printNode(
   ) {
     retDoc = [line, node.text, line];
   } else if ([":", ";", ","].includes(node.type)) retDoc = [node.text, line];
+  else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
+    retDoc = node.text;
   else {
     switch (node.type) {
       case "root": {
@@ -1435,6 +1469,8 @@ export function printNode(
             retDoc.push(nodeItem);
           }
         }
+
+        slurpedNodesByTree.delete(node.id);
 
         if (process.env.DEBUG_PASCAL_DOC) {
           console.log("finaldoc");
@@ -1592,6 +1628,8 @@ export function printNode(
         retDoc = printCagedItems(path, printFn, false, ["["], ["]"]);
         break;
       }
+      case "recInitializer":
+      case "arrInitializer":
       case "exprCall":
       case "declEnum":
       case "declArgs": {
@@ -1631,8 +1669,29 @@ export function printNode(
       case "declField":
       case "declType":
       case "declVar":
-      case "declArg": {
+      case "declVariantField":
+      case "declArg":
+      case "inlineConst": {
         retDoc = printNameWithType(path, printFn);
+        break;
+      }
+      case "recInitializerField": {
+        if (node?.fieldNameForChild(0) === "name") {
+          retDoc = printNameWithType(path, printFn);
+        } else {
+          let firstItem = true;
+          for (let i = 0; i < node.childCount; i++) {
+            const nodeItem = pathCall(path, printFn, i);
+            if (nodeItem !== "") {
+              if (!firstItem) {
+                retDoc.push(line);
+              }
+              firstItem = false;
+              retDoc.push(nodeItem);
+            }
+          }
+          retDoc = group(retDoc);
+        }
         break;
       }
       case "typerefTpl": {
@@ -1646,6 +1705,22 @@ export function printNode(
             retDoc.push(nodeItem);
           }
         }
+        break;
+      }
+      case "rttiAttributes": {
+        retDoc = [
+          hardline,
+          printCagedItems(
+            path,
+            printFn,
+            false,
+            ["["],
+            ["]"],
+            softline,
+            softline,
+          ),
+          hardline,
+        ];
         break;
       }
       case "defProc": {
@@ -1671,6 +1746,9 @@ export function printNode(
       case "declSet":
       case "declExport":
       case "declFile":
+      case "inherited":
+      case "procAttribute":
+      case "procExternal":
       case "raise":
       case "label":
       case "goto": {
@@ -1706,6 +1784,7 @@ export function printNode(
       case "caseLabel":
       case "declConst":
       case "declEnumValue":
+      case "declLabel":
       case "declString":
       case "defaultValue":
       case "exprDot":
@@ -1713,8 +1792,11 @@ export function printNode(
       case "exprSubscript":
       case "exprTpl":
       case "genericDot":
+      case "genericTpl":
+      case "genericArgs":
       case "guid":
       case "moduleName":
+      case "operatorDot":
       case "statement":
       case "statements":
       case "type":
@@ -1750,6 +1832,9 @@ export function printNode(
 
         break;
       }
+      case "literalChar":
+      case "literalNumber":
+      case "literalStringMultiline":
       case "literalString": {
         retDoc = node.text;
         break;
