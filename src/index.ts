@@ -616,93 +616,91 @@ function printDeclArray(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
-  const headerGroup: Doc[] = [];
-  const sectionsGroup: Doc[] = [];
-  const endGroup: Doc[] = [];
-  const postGroup: Doc[] = [];
 
-  const cageBoundaries: GroupMarker[] = [
-    {
-      type: "until-field-changes",
-      excludeMarker: true,
-      retryNode: true,
-      fieldNames: ["parent"],
-    },
-    {
-      type: "node",
-      excludeMarker: true,
-      retryNode: true,
-      markers: ["kEnd"],
-    },
-    {
-      type: "node",
-      markers: ["kEnd"],
-    },
-    {
-      type: "until-end",
-    },
-  ];
+  const groups: Doc[][] = [[]];
+  let groupingIndex = 0;
 
-  const groupingIndexes = buildGrouping(node, cageBoundaries);
+  for (let i = 0; i < node.childCount; i++) {
+    const child = node.child(i);
 
-  let firstItem = true;
-  let lastHeaderItemType = "";
-  groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
-      if (
-        !firstItem &&
-        !["(", ")"].includes(node.child(i)?.type ?? "") &&
-        !["(", ")"].includes(lastHeaderItemType)
-      ) {
-        headerGroup.push(line);
+    switch (groupingIndex) {
+      case 0: {
+        if (
+          [
+            "declField",
+            "declTypes",
+            "declVars",
+            "declConsts",
+            "declProc",
+            "declProp",
+            "declSection",
+            "declVariant",
+            "kEnd",
+          ].includes(child?.type ?? "")
+        ) {
+          groups.push([]);
+          groupingIndex++;
+          i--;
+        } else {
+          groups[groupingIndex].push(pathCall(path, printFn, i));
+        }
+        break;
       }
-      headerGroup.push(nodeItem);
-      firstItem = false;
-      lastHeaderItemType = node.child(i)?.type ?? "";
-    }
-  });
-
-  (groupingIndexes[1] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
-      sectionsGroup.push(nodeItem);
-    }
-  });
-
-  (groupingIndexes[2] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
-      endGroup.push(nodeItem);
-    }
-  });
-
-  firstItem = true;
-  (groupingIndexes[3] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeItem !== "") {
-      if (!firstItem) {
-        postGroup.push(line);
+      case 1: {
+        if (
+          ["declSection", "declVariant", "kEnd"].includes(child?.type ?? "")
+        ) {
+          groups.push([]);
+          groupingIndex++;
+          i--;
+        } else {
+          groups[groupingIndex].push(pathCall(path, printFn, i));
+        }
+        break;
       }
-      postGroup.push(nodeItem);
-      firstItem = false;
+      case 2: {
+        if (["declVariant", "kEnd"].includes(child?.type ?? "")) {
+          groups.push([]);
+          groupingIndex++;
+          i--;
+        } else {
+          groups[groupingIndex].push(pathCall(path, printFn, i));
+        }
+        break;
+      }
+      case 3: {
+        if (["kEnd"].includes(child?.type ?? "")) {
+          groups.push([]);
+          groupingIndex++;
+          i--;
+        } else {
+          groups[groupingIndex].push(pathCall(path, printFn, i));
+        }
+        break;
+      }
+      default: {
+        groups[groupingIndex].push(pathCall(path, printFn, i));
+        break;
+      }
     }
-  });
+  }
 
-  if (headerGroup.length > 0) {
+  if (groups[0].length > 0) {
     return group([
       group(
         indent([
-          group(headerGroup),
-          sectionsGroup.length > 0 ? line : softline,
-          join(line, sectionsGroup),
+          group(groups[0]),
+          groups[1].length > 0 ? line : "",
+          join(line, groups[1]),
+          groups[2].length > 0 ? line : "",
+          join(line, groups[2]),
+          groups[3].length > 0 ? line : "",
+          join(line, groups[3]),
         ]),
         { shouldBreak: true },
       ),
-      endGroup.length > 0 ? softline : "",
-      join(softline, endGroup),
-      postGroup.length > 0 ? softline : "",
-      join(softline, postGroup),
+      groups[4].length > 0 ? line : "",
+      join(softline, groups[4]),
     ]);
   } else {
     return "";
@@ -903,10 +901,8 @@ function printWhile(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   });
 
   if (whileGroup.length > 0 && postGroupArr.length > 0) {
-    if (statementIsBlock)
-      postGroup.push(group([line, postGroupArr]));
-    else
-      postGroup.push(indent([line, postGroupArr]));
+    if (statementIsBlock) postGroup.push(group([line, postGroupArr]));
+    else postGroup.push(indent([line, postGroupArr]));
     return group([group(whileGroup), postGroup]);
   } else {
     return "";
