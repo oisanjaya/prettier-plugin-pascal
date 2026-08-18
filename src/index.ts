@@ -25,6 +25,11 @@ const {
 type Parsers = Record<string, PrettierParser>;
 type Printers = Record<string, Printer>;
 
+interface PrinterState {
+  slurpedNodesByTree: Set<number>;
+  lastPrintIsLine: "no" | "hard" | "soft" | "line";
+}
+
 interface NodeMarker {
   type: "node";
   excludeMarker?: boolean;
@@ -112,7 +117,7 @@ const DECLARABLE_OPERATORS = [
 ];
 
 let parserInstance: Parser | null = null;
-const slurpedNodesByTree = new Map<number, Set<number>>();
+const printerState = new Map<number, PrinterState>();
 
 const getParser = async () => {
   if (!parserInstance) {
@@ -187,14 +192,17 @@ function getRootNode(node: TSNode): TSNode {
 function getSlurpedNodes(node: TSNode): Set<number> {
   const root = getRootNode(node);
 
-  let slurpedNodes = slurpedNodesByTree.get(root.id);
+  let curState = printerState.get(root.id);
 
-  if (!slurpedNodes) {
-    slurpedNodes = new Set<number>();
-    slurpedNodesByTree.set(root.id, slurpedNodes);
+  if (!curState) {
+    curState = {
+      slurpedNodesByTree: new Set<number>(),
+      lastPrintIsLine: "no",
+    };
+    printerState.set(root.id, curState);
   }
 
-  return slurpedNodes;
+  return curState.slurpedNodesByTree;
 }
 
 function getNextNodeInTraversal(
@@ -1438,7 +1446,7 @@ export function printNode(
           }
         }
 
-        slurpedNodesByTree.delete(node.id);
+        printerState.delete(node.id);
 
         if (process.env.DEBUG_PASCAL_DOC) {
           console.log("finaldoc");
