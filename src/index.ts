@@ -690,20 +690,20 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   });
 
   if (headerGroup.length > 0) {
-    return group(
-      [
+    return group([
+      group(
         indent([
           group(headerGroup),
           sectionsGroup.length > 0 ? line : softline,
           join(line, sectionsGroup),
         ]),
-        softline,
-        join(softline, endGroup),
-        postGroup.length > 0 ? softline : "",
-        join(softline, postGroup),
-      ],
-      { shouldBreak: true },
-    );
+        { shouldBreak: true },
+      ),
+      endGroup.length > 0 ? softline : "",
+      join(softline, endGroup),
+      postGroup.length > 0 ? softline : "",
+      join(softline, postGroup),
+    ]);
   } else {
     return "";
   }
@@ -879,6 +879,7 @@ function printWhile(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const whileGroup: Doc = [];
   const postGroup: Doc = [];
+  let postGroupArr: Doc[] = [];
 
   let firstItem = true;
   nodeGroups[0].forEach((i) => {
@@ -890,15 +891,23 @@ function printWhile(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
+  let statementIsBlock = false;
   (nodeGroups[1] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
-      postGroup.push(nodeItem);
+      postGroupArr.push(nodeItem);
+      if (node.child(i)?.type === "block") {
+        statementIsBlock = true;
+      }
     }
   });
 
-  if (whileGroup.length > 0 && postGroup.length > 0) {
-    return group([group(whileGroup), line, group(postGroup)]);
+  if (whileGroup.length > 0 && postGroupArr.length > 0) {
+    if (statementIsBlock)
+      postGroup.push(group([line, postGroupArr]));
+    else
+      postGroup.push(indent([line, postGroupArr]));
+    return group([group(whileGroup), postGroup]);
   } else {
     return "";
   }
