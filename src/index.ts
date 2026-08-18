@@ -372,7 +372,6 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const preGroup: Doc = [];
   const nameGroup: Doc = [];
-  let endGroup: Doc = [];
   const postGroup: Doc = [];
 
   (nodeGroups[0] ?? []).forEach((i) => {
@@ -420,8 +419,6 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       preGroup.length > 0 ? line : "",
       group(headerGroup),
       group(indent(joinedPostGroup)),
-      endGroup.length > 0 ? softline : "",
-      group(endGroup),
     ]);
   } else {
     return "";
@@ -906,7 +903,7 @@ function printTry(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 }
 
-function printWhile(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+function printDoBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
 
@@ -1496,7 +1493,7 @@ export function printNode(
       case "foreach":
       case "with":
       case "while": {
-        retDoc = printWhile(path, printFn);
+        retDoc = printDoBlock(path, printFn);
         break;
       }
       case "repeat": {
