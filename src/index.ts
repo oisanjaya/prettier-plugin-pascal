@@ -272,8 +272,17 @@ function buildGrouping(node: TSNode, targetTypes: GroupMarker[]) {
         currentTargetType.fieldNames.includes(lastChildFieldName ?? "") &&
         !currentTargetType.fieldNames.includes(childFieldName))
     ) {
-      if (currentTargetType.excludeMarker) groups[groupIndex].push(i);
-      if (currentTargetType.retryNode) i--;
+      if (
+        currentTargetType.excludeMarker === undefined ||
+        currentTargetType.excludeMarker === false
+      )
+        groups[groupIndex].push(i);
+
+      if (
+        currentTargetType.retryNode !== undefined &&
+        currentTargetType.retryNode === true
+      )
+        i--;
 
       groupIndex++;
       groups.push([]);
