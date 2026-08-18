@@ -1228,7 +1228,7 @@ function printExpression(
     }
   });
 
-  if (leftGroup.length > 0) {
+  if (leftGroup.length > 0 || rightGroup.length > 0) {
     return group([
       group(join(line, leftGroup)),
       pathCall(path, printFn, nodeGroups[1][0]),
@@ -1629,6 +1629,8 @@ export function printNode(
         );
         break;
       }
+      case "varDef":
+      case "varAssignDef":
       case "typeref":
       case "exprIf":
       case "declSet":
@@ -1675,6 +1677,7 @@ export function printNode(
       case "exprParens":
       case "exprSubscript":
       case "exprTpl":
+      case "genericDot":
       case "guid":
       case "moduleName":
       case "statement":
