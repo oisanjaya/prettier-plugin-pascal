@@ -49,7 +49,7 @@ interface UntilFieldChanges {
 type GroupMarker =
   NodeMarker | FieldMarker | UntilFieldChanges | { type: "until-end" };
 
-const SEPARATORS = [",", ";", ":"];
+const SEPARATORS = new Set([",", ";", ":"]);
 const BINARY_OPERATORS = [
   "kAdd",
   "kAnd",
@@ -235,13 +235,13 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
 
   while (
     !slurpedNodes.has(childNextSibling?.id ?? -1) &&
-    (SEPARATORS.includes(childNextSibling?.type ?? "") ||
+    (SEPARATORS.has(childNextSibling?.type ?? "") ||
       (childNextSibling?.type === "kEndDot" && child?.type === "kEnd") ||
       (childNextSibling?.type === "comment" &&
         childNextSibling.startPosition.row === child?.startPosition.row))
   ) {
     if (
-      (SEPARATORS.includes(childNextSibling?.type ?? "") &&
+      (SEPARATORS.has(childNextSibling?.type ?? "") &&
         !slurpedNodes.has(childNextSibling?.id ?? -1)) ||
       (childNextSibling?.type === "kEndDot" && child?.type === "kEnd")
     ) {
@@ -293,17 +293,8 @@ function buildGrouping(node: TSNode, targetTypes: GroupMarker[]) {
         currentTargetType.fieldNames.includes(lastChildFieldName ?? "") &&
         !currentTargetType.fieldNames.includes(childFieldName))
     ) {
-      if (
-        currentTargetType.excludeMarker === undefined ||
-        currentTargetType.excludeMarker === false
-      )
-        groups[groupIndex].push(i);
-
-      if (
-        currentTargetType.retryNode !== undefined &&
-        currentTargetType.retryNode === true
-      )
-        i--;
+      if (currentTargetType.excludeMarker) groups[groupIndex].push(i);
+      if (currentTargetType.retryNode) i--;
 
       groupIndex++;
       groups.push([]);
