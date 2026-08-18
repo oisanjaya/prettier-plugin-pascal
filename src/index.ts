@@ -56,64 +56,35 @@ type GroupMarker =
 
 const SEPARATORS = new Set([",", ";", ":"]);
 const BINARY_OPERATORS = [
-  "kAdd",
-  "kAnd",
-  "kDiv",
+  "kLt",
   "kEq",
-  "kFdiv",
+  "kNeq",
   "kGt",
+  "kLte",
   "kGte",
   "kIn",
   "kIs",
-  "kIsNot",
-  "kLt",
-  "kLte",
-  "kMod",
-  "kMul",
-  "kNeq",
-  "kNotIn",
+  "kAdd",
+  "kSub",
   "kOr",
+  "kXor",
+  "kMul",
+  "kFdiv",
+  "kDiv",
+  "kMod",
+  "kAnd",
   "kShl",
   "kShr",
-  "kSub",
-  "kXor",
+  "kNotIn",
+  "kIsNot",
 ];
 const UNARY_OPERATORS = ["kNot", "kAdd", "kSub", "kAt", "kHat"];
 const ASSIGNMENT_OPERATORS = [
   "kAssign",
   "kAssignAdd",
-  "kAssignDiv",
-  "kAssignMul",
   "kAssignSub",
-];
-const INLINE_OPERATORS = [
-  ...BINARY_OPERATORS,
-  ...UNARY_OPERATORS,
-  ...ASSIGNMENT_OPERATORS,
-  "kAs",
-];
-const DECLARABLE_OPERATORS = [
-  "kAdd",
-  "kAnd",
-  "kAssign",
-  "kDiv",
-  "kDot",
-  "kEq",
-  "kFdiv",
-  "kGt",
-  "kGte",
-  "kIn",
-  "kLt",
-  "kLte",
-  "kMod",
-  "kMul",
-  "kNeq",
-  "kNot",
-  "kOr",
-  "kShl",
-  "kShr",
-  "kSub",
-  "kXor",
+  "kAssignMul",
+  "kAssignDiv",
 ];
 
 let parserInstance: Parser | null = null;
@@ -1399,7 +1370,29 @@ export function printNode(
   else if (slurpedNodes.has(node.id)) retDoc = "";
   else if (node.type === "asmBody") retDoc = node.text;
   else if (
-    DECLARABLE_OPERATORS.includes(node.type) &&
+    [
+      "kAdd",
+      "kAnd",
+      "kAssign",
+      "kDiv",
+      "kDot",
+      "kEq",
+      "kFdiv",
+      "kGt",
+      "kGte",
+      "kIn",
+      "kLt",
+      "kLte",
+      "kMod",
+      "kMul",
+      "kNeq",
+      "kNot",
+      "kOr",
+      "kShl",
+      "kShr",
+      "kSub",
+      "kXor",
+    ].includes(node.type) &&
     node.parent?.parent?.type === "genericDot"
   )
     retDoc = node.text;
@@ -1411,7 +1404,34 @@ export function printNode(
     }
   } else if (node.type === "kIn" && (node.parent?.type ?? "") === "foreach") {
     retDoc = node.text;
-  } else if (INLINE_OPERATORS.includes(node.type)) {
+  } else if (
+    [
+      "kAdd",
+      "kAnd",
+      "kAs",
+      "kAssign",
+      "kAssignAdd",
+      "kAssignDiv",
+      "kAssignMul",
+      "kAssignSub",
+      "kDiv",
+      "kEq",
+      "kFdiv",
+      "kGte",
+      "kIn",
+      "kIs",
+      "kLte",
+      "kMod",
+      "kMul",
+      "kNeq",
+      "kNot",
+      "kOr",
+      "kShl",
+      "kShr",
+      "kSub",
+      "kXor",
+    ].includes(node.type)
+  ) {
     retDoc = [line, node.text, line];
   } else if ([":", ";", ","].includes(node.type)) retDoc = [node.text, line];
   else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
