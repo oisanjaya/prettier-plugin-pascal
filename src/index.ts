@@ -52,7 +52,6 @@ type GroupMarker =
 const SEPARATORS = [",", ";", ":"];
 const BINARY_OPERATORS = [
   "kLt",
-  "kLt",
   "kEq",
   "kNeq",
   "kGt",
@@ -165,7 +164,7 @@ function getSlurpedNodes(node: TSNode): Set<number> {
     slurpedNodes = new Set<number>();
     slurpedNodesByTree.set(root.id, slurpedNodes);
   }
-  
+
   return slurpedNodes;
 }
 
@@ -1368,11 +1367,12 @@ export function printNode(
   if (!node) return "";
 
   const slurpedNodes = getSlurpedNodes(node);
-  
+
   let retDoc: Doc = [];
 
   if (!node?.type) retDoc = "";
   else if (slurpedNodes.has(node.id)) retDoc = "";
+  else if (node.type === "asmBody") retDoc = node.text;
   else if (
     [
       "kAdd",
@@ -1739,6 +1739,22 @@ export function printNode(
         );
         break;
       }
+      case "asm": {
+        retDoc = printCagedItems(
+          path,
+          printFn,
+          true,
+          ["asm"],
+          ["kEnd"],
+          softline,
+          line,
+        );
+        break;
+      }
+      case "pp": {
+        retDoc = node.text;
+        break;
+      }
       case "varDef":
       case "varAssignDef":
       case "typeref":
@@ -1781,6 +1797,7 @@ export function printNode(
         retDoc = join(softline, path.map(printFn, "children"));
         break;
       }
+      case "comment":
       case "caseLabel":
       case "declConst":
       case "declEnumValue":
@@ -1797,8 +1814,10 @@ export function printNode(
       case "guid":
       case "moduleName":
       case "operatorDot":
+      case "operatorName":
       case "statement":
       case "statements":
+      case "statementsTr":
       case "type":
       case "typerefArgs":
       case "typerefDot":
