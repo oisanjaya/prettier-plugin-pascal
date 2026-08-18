@@ -1115,6 +1115,12 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const cageBoundaries: GroupMarker[] = [
     {
       type: "field",
+      excludeMarker: true,
+      retryNode: true,
+      fieldName: ["name"],
+    },
+    {
+      type: "field",
       fieldName: ["name"],
     },
     {
@@ -1126,34 +1132,35 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const groupingIndexes = buildGrouping(node, cageBoundaries);
 
-  let preGroup: Doc = [];
   const preGroupArr: Doc[] = [];
+  const nameGroupArr: Doc[] = [];
   const declArgsArr: Doc[] = [];
   const postGroupArr: Doc[] = [];
 
-  let firstItem = true;
   (groupingIndexes[0] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
-      if (!firstItem) {
-        preGroupArr.push(line);
-      }
       preGroupArr.push(nodeItem);
-      firstItem = false;
+      preGroupArr.push(line);
     }
   });
 
-  if (preGroupArr.length > 0) preGroup = group(preGroupArr);
-
   (groupingIndexes[1] ?? []).forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeItem !== "") {
+      nameGroupArr.push(nodeItem);
+    }
+  });
+
+  (groupingIndexes[2] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       declArgsArr.push(nodeItem);
     }
   });
 
-  firstItem = true;
-  (groupingIndexes[2] ?? []).forEach((i) => {
+  let firstItem = true;
+  (groupingIndexes[3] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeItem !== "") {
       if (!firstItem) {
@@ -1164,10 +1171,15 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
-  if (preGroupArr.length > 0) {
+  console.log({ preGroupArr: JSON.stringify(preGroupArr) });
+  console.log({ nameGroupArr: JSON.stringify(nameGroupArr) });
+  console.log({ declArgsArr: JSON.stringify(declArgsArr) });
+  console.log({ postGroupArr: JSON.stringify(postGroupArr) });
+
+  if (preGroupArr.length > 0 || nameGroupArr.length > 0) {
     return indent(
       group([
-        preGroup,
+        group([preGroupArr, nameGroupArr]),
         declArgsArr,
         postGroupArr.length > 0 ? softline : "",
         group(postGroupArr),
@@ -1338,6 +1350,33 @@ export function printNode(
   else if (slurpedNodes.has(node.id)) retDoc = "";
   else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
     retDoc = node.text;
+  else if (
+    [
+      "kAdd",
+      "kAnd",
+      "kAssign",
+      "kDiv",
+      "kDot",
+      "kEq",
+      "kFdiv",
+      "kGt",
+      "kGte",
+      "kIn",
+      "kLt",
+      "kLte",
+      "kMod",
+      "kMul",
+      "kNeq",
+      "kNot",
+      "kOr",
+      "kShl",
+      "kShr",
+      "kSub",
+      "kXor",
+    ].includes(node.type) &&
+    node.parent?.parent?.type === "genericDot"
+  )
+    retDoc = node.text;
   else if (["kGt", "kLt"].includes(node.type)) {
     if (["exprBinary", "operatorName"].includes(node.parent?.type ?? "")) {
       retDoc = [line, node.text, line];
@@ -1348,30 +1387,30 @@ export function printNode(
     retDoc = node.text;
   } else if (
     [
-      "kEq",
-      "kNeq",
-      "kLte",
-      "kGte",
       "kAdd",
-      "kSub",
-      "kMul",
-      "kFdiv",
+      "kAnd",
+      "kAs",
       "kAssign",
       "kAssignAdd",
-      "kAssignSub",
-      "kAssignMul",
       "kAssignDiv",
-      "kOr",
-      "kXor",
+      "kAssignMul",
+      "kAssignSub",
       "kDiv",
+      "kEq",
+      "kFdiv",
+      "kGte",
+      "kIn",
+      "kIs",
+      "kLte",
       "kMod",
-      "kAnd",
+      "kMul",
+      "kNeq",
+      "kNot",
+      "kOr",
       "kShl",
       "kShr",
-      "kNot",
-      "kIs",
-      "kAs",
-      "kIn",
+      "kSub",
+      "kXor",
     ].includes(node.type)
   ) {
     retDoc = [line, node.text, line];
