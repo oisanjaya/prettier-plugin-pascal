@@ -1,0 +1,8 @@
+# Change Log
+
+# 0.1.0 (2026-08-20)
+
+### Features
+
+- first prettier-plugin-pascal public repo
+- pin parser to https://github.com/jimmckeeth/tree-sitter-pascal/releases/download/v0.11.0-9e9f070/tree-sitter-pascal.wasm
