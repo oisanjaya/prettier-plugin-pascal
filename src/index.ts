@@ -1870,6 +1870,18 @@ export function printNode(
     }
   }
 
+  const nodePrevSibling = node.previousSibling;
+  const parentType = node.parent?.type;
+  const nodeMaybeSpacedFromSibling =
+    ["program", "unit", "library", "block"].includes(parentType ?? "") ||
+    parentType?.startsWith("decl");
+  if (
+    nodePrevSibling &&
+    nodeMaybeSpacedFromSibling &&
+    node.startPosition.row - nodePrevSibling.endPosition.row > 1
+  ) {
+    retDoc = [hardline, retDoc];
+  }
   return retDoc;
 }
 
