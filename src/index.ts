@@ -334,7 +334,7 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   if (!node) return "";
 
   const targetTypes: GroupMarker[] = [
-    { type: "node", excludeMarker: true, retryNode: false, markers: [";"] },
+    { type: "node", markers: ["moduleName"] },
     { type: "until-end" },
   ];
 
@@ -1793,7 +1793,10 @@ export function printNode(
         retDoc = join(softline, path.map(printFn, "children"));
         break;
       }
-      case "comment":
+      case "comment": {
+        retDoc = node.text;
+        break;
+      }
       case "caseLabel":
       case "declConst":
       case "declEnumValue":
