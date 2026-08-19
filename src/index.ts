@@ -1435,7 +1435,8 @@ export function printNode(
     retDoc = node.text;
   else if (INLINE_OPERATORS.includes(node.type)) {
     retDoc = [line, node.text, line];
-  } else if (SEPARATORS.has(node.type)) retDoc = [node.text, line];
+  } else if (SEPARATORS.has(node.type))
+    retDoc = [node.text, node.parent?.type === "legacyFormat" ? "" : line];
   else {
     switch (node.type) {
       case "root": {
@@ -1790,7 +1791,7 @@ export function printNode(
         break;
       }
       case "legacyFormat": {
-        retDoc = join(softline, path.map(printFn, "children"));
+        retDoc = group(join(softline, path.map(printFn, "children")));
         break;
       }
       case "comment": {
