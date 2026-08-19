@@ -1,5 +1,5 @@
 import { Parser, Node as TSNode } from "web-tree-sitter";
-import { loadPascalParser } from "./treeSitterLoader";
+import { loadPascalParser } from "./treeSitterLoader.js";
 
 import prettier, {
   Parser as PrettierParser,
