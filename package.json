@@ -11,7 +11,7 @@
   ],
   "scripts": {
     "build:parser": "node scripts/download-parser.mjs",
-    "build:ts": "tsup",
+    "build:ts": "tsup src/index.ts",
     "build": "npm run clean && npm run build:ts && npm run build:parser",
     "clean": "rimraf dist"
   },
