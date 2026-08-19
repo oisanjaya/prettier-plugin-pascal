@@ -708,7 +708,8 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
           groupingIndex++;
           i--;
         } else {
-          groups[groupingIndex].push(pathCall(path, printFn, i));
+          const nodeItem = pathCall(path, printFn, i);
+          if (nodeIsNotEmpty(nodeItem)) groups[groupingIndex].push(nodeItem);
         }
         break;
       }
@@ -719,7 +720,8 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
           groupingIndex++;
           i--;
         } else {
-          groups[groupingIndex].push(pathCall(path, printFn, i));
+          const nodeItem = pathCall(path, printFn, i);
+          if (nodeIsNotEmpty(nodeItem)) groups[groupingIndex].push(nodeItem);
         }
         break;
       }
@@ -728,7 +730,8 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
           groupingIndex++;
           i--;
         } else {
-          groups[groupingIndex].push(pathCall(path, printFn, i));
+          const nodeItem = pathCall(path, printFn, i);
+          if (nodeIsNotEmpty(nodeItem)) groups[groupingIndex].push(nodeItem);
         }
         break;
       }
@@ -737,12 +740,14 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
           groupingIndex++;
           i--;
         } else {
-          groups[groupingIndex].push(pathCall(path, printFn, i));
+          const nodeItem = pathCall(path, printFn, i);
+          if (nodeIsNotEmpty(nodeItem)) groups[groupingIndex].push(nodeItem);
         }
         break;
       }
       default: {
-        groups[groupingIndex].push(pathCall(path, printFn, i));
+        const nodeItem = pathCall(path, printFn, i);
+        if (nodeIsNotEmpty(nodeItem)) groups[groupingIndex].push(nodeItem);
         break;
       }
     }
