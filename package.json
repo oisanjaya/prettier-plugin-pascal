@@ -14,7 +14,7 @@
     "build:ts": "tsup src/index.ts",
     "build": "npm run clean && npm run build:ts && npm run build:parser",
     "clean": "rimraf dist",
-    "test": "node --import tsx --test tests/**/*.test.ts"
+    "test": "node --import tsx --test tests/**/*test.ts"
   },
   "keywords": [
     "prettier",
