@@ -1,9 +1,6 @@
 # Prettier Pascal Plugin
 
-[CI Status]
-[npm version]
-[weekly downloads from npm]
-[code style: prettier]
+[![Node.js CI](https://github.com/oisanjaya/prettier-plugin-pascal/actions/workflows/node.js.yml/badge.svg?branch=main)](https://github.com/oisanjaya/prettier-plugin-pascal/actions/workflows/node.js.yml) ![NPM Version](https://img.shields.io/npm/v/prettier-plugin-pascal) ![NPM Downloads](https://img.shields.io/npm/dm/prettier-plugin-pascal) ![Static Badge](https://img.shields.io/badge/plugin-prettier-blue)
 
 ## Intro
 
