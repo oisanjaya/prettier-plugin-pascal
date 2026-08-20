@@ -2,4 +2,3 @@ tests/**
 node_modules/
 dist/**
 *.bak
-package-lock.json
