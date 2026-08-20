@@ -5,7 +5,7 @@ import prettier, {
   Parser as PrettierParser,
   Printer,
   SupportLanguage as Language,
-  Options,
+  SupportOption,
   AstPath,
   Doc,
 } from "prettier";
@@ -175,7 +175,7 @@ export const printers: Printers = {
 };
 
 // Optional custom options
-export const options: Options = {};
+export const options: Record<string, SupportOption> = {};
 
 type PrintFn = (path: AstPath<TSNode>) => Doc;
 

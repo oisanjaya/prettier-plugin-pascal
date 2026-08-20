@@ -1,4 +1,4 @@
-tests/**
+tests/lt*.*
 node_modules/
 dist/**
 *.bak

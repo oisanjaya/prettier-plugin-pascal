@@ -13,7 +13,8 @@
     "build:parser": "node scripts/download-parser.mjs",
     "build:ts": "tsup src/index.ts",
     "build": "npm run clean && npm run build:ts && npm run build:parser",
-    "clean": "rimraf dist"
+    "clean": "rimraf dist",
+    "test": "node --import tsx --test tests/**/*.test.ts"
   },
   "keywords": [
     "prettier",
