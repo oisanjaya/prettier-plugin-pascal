@@ -512,11 +512,6 @@ function printCagedItems(
     });
   }
 
-  // if (openinCage.includes("(")) {
-  //   console.log({ preGroup: JSON.stringify(preGroup) });
-  //   console.log({ openCageGroup: JSON.stringify(openCageGroup) });
-  // }
-
   if (openCageGroup.length > 0 && itemsGroup.length > 0) {
     return group(
       [
@@ -529,7 +524,7 @@ function printCagedItems(
         ]),
         indent([softline, join(softline, itemsGroup)]),
         closeCageGroup.length > 0 ? softline : "",
-        group([join(softline, closeCageGroup), line]),
+        group([join(softline, closeCageGroup), softline]),
         postGroup.length > 0
           ? group([softline, join(line, postGroup), line])
           : "",
@@ -829,9 +824,12 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       group([join(line, ifGroup), line]),
       indent([softline, join(line, thenGroup)]),
       elseGroup.length > 0
-        ? group([line, pathCall(path, printFn, nodeGroups[2][0]), line])
+        ? [
+            line,
+            pathCall(path, printFn, nodeGroups[2][0]),
+            indent([line, join(line, elseGroup)]),
+          ]
         : "",
-      indent([softline, join(line, elseGroup)]),
       postGroup.length > 0 ? line : "",
       group(join(line, postGroup)),
     ]);
