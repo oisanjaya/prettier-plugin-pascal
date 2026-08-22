@@ -1497,9 +1497,10 @@ export function printNode(
               "kFinalization",
             ].includes(node.child(i)?.type ?? "")
           ) {
-            retDoc.push([hardline, node.text, hardline]);
+            retDoc.push([hardline, node.child(i)?.text ?? "", hardline]);
           } else {
             const nodeItem = pathCall(path, printFn, i);
+            // const nodeItem = "===" + node.type + " child " + i + " type " + node.child(i)?.type;
             if (nodeIsNotEmpty(nodeItem)) retDoc.push(nodeItem);
           }
         }
