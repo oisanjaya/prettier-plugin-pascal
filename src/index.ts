@@ -356,11 +356,10 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   });
 
   if (headerGroup.length > 0 && contentsGroup.length > 0) {
-    return group([
-      group(join(line, headerGroup)),
-      hardline,
-      group(join(hardline, contentsGroup)),
-    ]);
+    return group(
+      [group(join(line, headerGroup)), line, join(line, contentsGroup)],
+      { shouldBreak: true },
+    );
   } else {
     return "";
   }
@@ -419,25 +418,15 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
-  const joinedPostGroup = [];
-  let firstItem = true;
-  for (let i = 0; i < postGroup.length; i++) {
-    const nodeItem = postGroup[i];
-    if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) {
-        joinedPostGroup.push(line);
-      }
-      joinedPostGroup.push(nodeItem);
-      firstItem = false;
-    }
-  }
-
   if (nameGroup.length > 0) {
     return group([
-      group(join(line, preGroup)),
-      preGroup.length > 0 ? line : "",
-      group(headerGroup),
-      group(indent(joinedPostGroup)),
+      group([
+        group(join(line, preGroup)),
+        preGroup.length > 0 ? line : "",
+        group(headerGroup),
+        softline,
+      ]),
+      indent([softline, join(line, postGroup)]),
     ]);
   } else {
     return "";
@@ -480,68 +469,70 @@ function printCagedItems(
 
   const groupingIndexes = buildGrouping(node, cageBoundaries);
 
+  const preGroup: Doc = [];
   const headerGroup: Doc = [];
   const itemsGroup: Doc = [];
-  const closingGroup: Doc = [];
+  const postGroup: Doc = [];
+  const closeCageGroup: Doc = [];
 
-  let firstItem = true;
   groupingIndexes[0].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) {
-        headerGroup.push("line");
-      }
-      headerGroup.push(nodeItem);
-      firstItem = false;
+      preGroup.push(nodeItem);
     }
   });
 
   groupingIndexes[1].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      headerGroup.push(beforeCageSeparator);
       headerGroup.push(nodeItem);
-      headerGroup.push(afterCageSeparator);
     }
   });
 
   groupingIndexes[2].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      itemsGroup.push(forceBreak ? hardline : softline);
       itemsGroup.push(nodeItem);
     }
   });
 
   if (closingCage !== undefined) {
-    firstItem = true;
     (groupingIndexes[3] ?? []).forEach((i) => {
       const nodeItem = pathCall(path, printFn, i);
       if (nodeIsNotEmpty(nodeItem)) {
-        if (!firstItem) {
-          closingGroup.push(line);
-        }
-        firstItem = false;
-        closingGroup.push(nodeItem);
+        closeCageGroup.push(nodeItem);
       }
     });
 
     (groupingIndexes[4] ?? []).forEach((i) => {
       const nodeItem = pathCall(path, printFn, i);
       if (nodeIsNotEmpty(nodeItem)) {
-        closingGroup.push(line);
-        closingGroup.push(nodeItem);
+        postGroup.push(nodeItem);
       }
     });
   }
 
+  if (node.type === "declTypes") console.log({ headerGroup });
+
   if (headerGroup.length > 0 && itemsGroup.length > 0) {
-    return group([
-      group(headerGroup),
-      indent(group(itemsGroup, { shouldBreak: forceBreak })),
-      closingGroup.length > 0 ? softline : "",
-      group(closingGroup),
-    ]);
+    return group(
+      [
+        group([
+          join(line, preGroup),
+          preGroup.length > 0 ? line : "",
+          beforeCageSeparator,
+          join(line, headerGroup),
+          afterCageSeparator,
+          line,
+        ]),
+        indent([softline, join(softline, itemsGroup)]),
+        closeCageGroup.length > 0 ? softline : "",
+        group([join(softline, closeCageGroup), line]),
+        postGroup.length > 0 ? softline : "",
+        group([join(line, closeCageGroup), line]),
+      ],
+      { shouldBreak: forceBreak },
+    );
   } else {
     return "";
   }
@@ -565,34 +556,30 @@ function printHangingList(
   const headerGroup: Doc = [];
   const itemsGroup: Doc = [];
 
-  let firstItem = true;
   groupingIndexes[0].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) {
-        headerGroup.push(softline);
-      }
       headerGroup.push(nodeItem);
-      firstItem = false;
     }
   });
 
-  headerGroup.push(softline);
-
-  firstItem = true;
   groupingIndexes[1].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (firstItem) {
-        itemsGroup.push(hardline);
-      }
-      firstItem = false;
       itemsGroup.push(nodeItem);
     }
   });
 
   if (headerGroup.length > 0 && itemsGroup.length > 0) {
-    return group([group(headerGroup), indent(itemsGroup)]);
+    return group(
+      [
+        group([join(line, headerGroup)]),
+        indent([softline, join(softline, itemsGroup)]),
+      ],
+      {
+        shouldBreak: true,
+      },
+    );
   } else {
     return "";
   }
@@ -643,22 +630,16 @@ function printDeclArray(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const rangeGroup: Doc = [];
   const postGroup: Doc = [];
 
-  let firstItem = true;
   nodeGroups[0].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) preGroup.push(line);
-      firstItem = false;
       preGroup.push(nodeItem);
     }
   });
 
-  firstItem = true;
   nodeGroups[1].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) rangeGroup.push(softline);
-      firstItem = false;
       rangeGroup.push(nodeItem);
     }
   });
@@ -666,13 +647,17 @@ function printDeclArray(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   nodeGroups[2].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      postGroup.push(line);
       postGroup.push(nodeItem);
     }
   });
 
   if (nodeGroups.length > 0 && postGroup.length > 0) {
-    return group([preGroup, rangeGroup, postGroup]);
+    return group([
+      join(line, preGroup),
+      join(softline, rangeGroup),
+      line,
+      postGroup,
+    ]);
   } else {
     return "";
   }
@@ -838,13 +823,12 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   if (ifGroup.length > 0 && thenGroup.length > 0) {
     return group([
-      group(join(line, ifGroup)),
-      line,
-      group(join(line, thenGroup)),
-      elseGroup.length > 0 ? line : "",
-      elseGroup.length > 0 ? pathCall(path, printFn, nodeGroups[2][0]) : "",
-      elseGroup.length > 0 ? line : "",
-      group(join(line, elseGroup)),
+      group([join(line, ifGroup), line]),
+      indent([softline, join(line, thenGroup)]),
+      elseGroup.length > 0
+        ? group([line, pathCall(path, printFn, nodeGroups[2][0]), line])
+        : "",
+      indent([softline, join(line, elseGroup)]),
       postGroup.length > 0 ? line : "",
       group(join(line, postGroup)),
     ]);
@@ -887,22 +871,16 @@ function printTry(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const handlerGroup: Doc = [];
   const postGroup: Doc = [];
 
-  let firstItem = true;
   nodeGroups[0].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) tryGroup.push(line);
-      firstItem = false;
       tryGroup.push(nodeItem);
     }
   });
 
-  firstItem = true;
   nodeGroups[1].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) handlerGroup.push(line);
-      firstItem = false;
       handlerGroup.push(nodeItem);
     }
   });
@@ -916,9 +894,9 @@ function printTry(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   if (tryGroup.length > 0 && handlerGroup.length > 0 && postGroup.length > 0) {
     return group([
-      indent(group(tryGroup, { shouldBreak: true })),
+      indent(group(join(line, tryGroup), { shouldBreak: true })),
       handlerGroup.length > 0 ? hardline : "",
-      indent(group(handlerGroup, { shouldBreak: true })),
+      indent(group(join(line, handlerGroup), { shouldBreak: true })),
       line,
       group(postGroup),
     ]);
@@ -945,12 +923,9 @@ function printDoBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const postGroup: Doc = [];
   let postGroupArr: Doc[] = [];
 
-  let firstItem = true;
   nodeGroups[0].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) whileGroup.push(line);
-      firstItem = false;
       whileGroup.push(nodeItem);
     }
   });
@@ -969,7 +944,7 @@ function printDoBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   if (whileGroup.length > 0 && postGroupArr.length > 0) {
     if (statementIsBlock) postGroup.push(group([line, postGroupArr]));
     else postGroup.push(indent([line, postGroupArr]));
-    return group([group(whileGroup), postGroup]);
+    return group([group(join(line, whileGroup)), postGroup]);
   } else {
     return "";
   }
@@ -992,30 +967,24 @@ function printCaseCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const preGroup: Doc = [];
   const postGroup: Doc = [];
 
-  let firstItem = true;
   (nodeGroups[0] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) preGroup.push(line);
-      firstItem = false;
       preGroup.push(nodeItem);
     }
   });
 
-  firstItem = true;
   (nodeGroups[1] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) postGroup.push(line);
-      firstItem = false;
       postGroup.push(nodeItem);
     }
   });
 
   if (preGroup.length > 0 && postGroup.length > 0) {
     return group([
-      group(preGroup),
-      indent(group([ifBreak(line, ""), postGroup])),
+      group(join(line, preGroup)),
+      indent(group([ifBreak(line, ""), join(line, postGroup)])),
     ]);
   } else {
     return "";
@@ -1039,17 +1008,14 @@ function printDeclVariantClause(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const preGroup: Doc = [];
   const postGroup: Doc = [];
 
-  let firstItem = true;
   (nodeGroups[0] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) preGroup.push(line);
-      firstItem = false;
       preGroup.push(nodeItem);
     }
   });
 
-  firstItem = true;
+  let firstItem = true;
   (nodeGroups[1] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
@@ -1065,7 +1031,7 @@ function printDeclVariantClause(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   if (preGroup.length > 0 && postGroup.length > 0) {
     return group([
-      group(preGroup),
+      group(join(line, preGroup)),
       indent(group([ifBreak(line, ""), postGroup])),
     ]);
   } else {
@@ -1100,27 +1066,21 @@ function printCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const groupingIndexes = buildGrouping(node, cageBoundaries);
 
   const headerGroup: Doc = [];
+  const ofGroup: Doc = [];
   const itemsGroup: Doc = [];
   const closingGroup: Doc = [];
 
-  let firstItem = true;
   groupingIndexes[0].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) {
-        headerGroup.push(line);
-      }
       headerGroup.push(nodeItem);
-      firstItem = false;
     }
   });
 
   groupingIndexes[1].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      headerGroup.push(line);
-      headerGroup.push(nodeItem);
-      headerGroup.push(line);
+      ofGroup.push(nodeItem);
     }
   });
 
@@ -1128,7 +1088,6 @@ function printCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     if (["kElse", "kOtherwise"].includes(node.child(i)?.type ?? "")) {
       const elseStatement = pathCall(path, printFn, i + 1);
       slurpedNodes.add(node.child(i)?.nextSibling?.id ?? -100);
-      itemsGroup.push(hardline);
       itemsGroup.push(
         group([
           group(node.child(i)?.text ?? ""),
@@ -1138,20 +1097,14 @@ function printCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     } else {
       const nodeItem = pathCall(path, printFn, i);
       if (nodeIsNotEmpty(nodeItem)) {
-        itemsGroup.push(hardline);
         itemsGroup.push(nodeItem);
       }
     }
   });
 
-  firstItem = true;
   (groupingIndexes[3] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) {
-        closingGroup.push(line);
-      }
-      firstItem = false;
       closingGroup.push(nodeItem);
     }
   });
@@ -1159,17 +1112,18 @@ function printCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   (groupingIndexes[4] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      closingGroup.push(line);
       closingGroup.push(nodeItem);
     }
   });
 
   if (headerGroup.length > 0 && itemsGroup.length > 0) {
     return group([
-      group(headerGroup),
-      indent(group(itemsGroup, { shouldBreak: true })),
+      group([join(line, headerGroup), line, join(line, ofGroup), line]),
+      indent(
+        group([hardline, join(hardline, itemsGroup)], { shouldBreak: true }),
+      ),
       closingGroup.length > 0 ? softline : "",
-      group(closingGroup),
+      group(join(line, closingGroup)),
     ]);
   } else {
     return "";
@@ -1200,52 +1154,46 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const groupingIndexes = buildGrouping(node, cageBoundaries);
 
-  const preGroupArr: Doc[] = [];
-  const nameGroupArr: Doc[] = [];
-  const declArgsArr: Doc[] = [];
-  const postGroupArr: Doc[] = [];
+  const preGroup: Doc = [];
+  const nameGroup: Doc = [];
+  const declArgs: Doc = [];
+  const postGroup: Doc = [];
 
   (groupingIndexes[0] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      preGroupArr.push(nodeItem);
-      preGroupArr.push(line);
+      preGroup.push(nodeItem);
     }
   });
 
   (groupingIndexes[1] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      nameGroupArr.push(nodeItem);
+      nameGroup.push(nodeItem);
     }
   });
 
   (groupingIndexes[2] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      declArgsArr.push(nodeItem);
+      declArgs.push(nodeItem);
     }
   });
 
-  let firstItem = true;
   (groupingIndexes[3] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) {
-        postGroupArr.push(softline);
-      }
-      postGroupArr.push(nodeItem);
-      firstItem = false;
+      postGroup.push(nodeItem);
     }
   });
 
-  if (preGroupArr.length > 0 || nameGroupArr.length > 0) {
+  if (preGroup.length > 0 || nameGroup.length > 0) {
     return indent(
       group([
-        group([preGroupArr, nameGroupArr]),
-        declArgsArr,
-        postGroupArr.length > 0 ? softline : "",
-        group(postGroupArr),
+        group([join(line, preGroup), line, join(softline, nameGroup)]),
+        join(softline, declArgs),
+        postGroup.length > 0 ? softline : "",
+        group(join(softline, postGroup)),
       ]),
     );
   } else {
@@ -1346,47 +1294,32 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const groupingIndexes = buildGrouping(node, cageBoundaries);
 
-  let firstItem = true;
   (groupingIndexes[0] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) {
-        headerGroup.push(line);
-      }
       headerGroup.push(nodeItem);
-      firstItem = false;
     }
   });
 
-  firstItem = true;
   (groupingIndexes[1] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) {
-        localGroup.push(softline);
-      }
       localGroup.push(nodeItem);
-      firstItem = false;
     }
   });
 
-  firstItem = true;
   (groupingIndexes[2] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (!firstItem) {
-        postGroup.push(line);
-      }
       postGroup.push(nodeItem);
-      firstItem = false;
     }
   });
 
   if (headerGroup.length > 0) {
     return group([
-      group(headerGroup),
+      group(join(line,headerGroup)),
       localGroup.length > 0 ? softline : "",
-      group(localGroup),
+      group(join(softline,localGroup)),
       postGroup.length > 0 ? softline : "",
       join(softline, postGroup),
     ]);
@@ -1562,7 +1495,7 @@ export function printNode(
         retDoc = printCagedItems(
           path,
           printFn,
-          true,
+          false,
           ["kDo"],
           undefined,
           line,
@@ -1727,7 +1660,7 @@ export function printNode(
         retDoc = printCagedItems(
           path,
           printFn,
-          true,
+          false,
           ["kBegin"],
           ["kEnd"],
           softline,
@@ -1739,7 +1672,7 @@ export function printNode(
         retDoc = printCagedItems(
           path,
           printFn,
-          true,
+          false,
           ["asm"],
           ["kEnd"],
           softline,
@@ -1887,7 +1820,7 @@ export function printNode(
     nodeMaybeSpacedFromSibling &&
     node.startPosition.row - nodePrevSibling.endPosition.row > 1
   ) {
-    retDoc = [hardline, retDoc];
+    // retDoc = [hardline, retDoc];
   }
   return retDoc;
 }
