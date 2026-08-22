@@ -27,7 +27,6 @@ type Printers = Record<string, Printer>;
 
 interface PrinterState {
   slurpedNodesByTree: Set<number>;
-  lastPrintIsLine: "no" | "hard" | "soft" | "line";
 }
 
 interface NodeMarker {
@@ -197,7 +196,6 @@ function getSlurpedNodes(node: TSNode): Set<number> {
   if (!curState) {
     curState = {
       slurpedNodesByTree: new Set<number>(),
-      lastPrintIsLine: "no",
     };
     printerState.set(root.id, curState);
   }
@@ -1874,8 +1872,16 @@ export function printNode(
   const nodePrevSibling = node.previousSibling;
   const parentType = node.parent?.type;
   const nodeMaybeSpacedFromSibling =
-    ["program", "unit", "library", "block"].includes(parentType ?? "") ||
-    parentType?.startsWith("decl");
+    [
+      "program",
+      "unit",
+      "library",
+      "block",
+      "interface",
+      "implementation",
+      "initialization",
+      "finalization",
+    ].includes(parentType ?? "") || parentType?.startsWith("decl");
   if (
     nodePrevSibling &&
     nodeMaybeSpacedFromSibling &&
