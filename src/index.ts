@@ -470,7 +470,7 @@ function printCagedItems(
   const groupingIndexes = buildGrouping(node, cageBoundaries);
 
   const preGroup: Doc = [];
-  const headerGroup: Doc = [];
+  const openCageGroup: Doc = [];
   const itemsGroup: Doc = [];
   const postGroup: Doc = [];
   const closeCageGroup: Doc = [];
@@ -485,7 +485,7 @@ function printCagedItems(
   groupingIndexes[1].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      headerGroup.push(nodeItem);
+      openCageGroup.push(nodeItem);
     }
   });
 
@@ -512,24 +512,27 @@ function printCagedItems(
     });
   }
 
-  if (node.type === "declTypes") console.log({ headerGroup });
+  // if (openinCage.includes("(")) {
+  //   console.log({ preGroup: JSON.stringify(preGroup) });
+  //   console.log({ openCageGroup: JSON.stringify(openCageGroup) });
+  // }
 
-  if (headerGroup.length > 0 && itemsGroup.length > 0) {
+  if (openCageGroup.length > 0 && itemsGroup.length > 0) {
     return group(
       [
         group([
           join(line, preGroup),
-          preGroup.length > 0 ? line : "",
+          preGroup.length > 0 ? softline : "",
           beforeCageSeparator,
-          join(line, headerGroup),
+          join(softline, openCageGroup),
           afterCageSeparator,
-          line,
         ]),
         indent([softline, join(softline, itemsGroup)]),
         closeCageGroup.length > 0 ? softline : "",
         group([join(softline, closeCageGroup), line]),
-        postGroup.length > 0 ? softline : "",
-        group([join(line, closeCageGroup), line]),
+        postGroup.length > 0
+          ? group([softline, join(line, postGroup), line])
+          : "",
       ],
       { shouldBreak: forceBreak },
     );
@@ -1317,9 +1320,9 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   if (headerGroup.length > 0) {
     return group([
-      group(join(line,headerGroup)),
+      group(join(line, headerGroup)),
       localGroup.length > 0 ? softline : "",
-      group(join(softline,localGroup)),
+      group(join(softline, localGroup)),
       postGroup.length > 0 ? softline : "",
       join(softline, postGroup),
     ]);
@@ -1428,7 +1431,7 @@ export function printNode(
               "kFinalization",
             ].includes(node.child(i)?.type ?? "")
           ) {
-            retDoc.push([hardline, node.child(i)?.text ?? "", hardline]);
+            retDoc.push([node.child(i)?.text ?? "", hardline]);
           } else {
             const nodeItem = pathCall(path, printFn, i);
             // const nodeItem = "===" + node.type + " child " + i + " type " + node.child(i)?.type;
