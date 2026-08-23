@@ -348,16 +348,37 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
+  let lastNodeIfBreak: Doc = "";
+  let shouldBreak = false;
   nodeGroups[1].forEach((i) => {
+    if (shouldBreak) return;
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
+      if (node.child(i)?.type === "block") {
+        shouldBreak = true;
+        lastNodeIfBreak = [
+          line,
+          nodeItem,
+          line,
+          pathCall(path, printFn, node.childCount - 1),
+        ];
+        return;
+      }
       contentsGroup.push(nodeItem);
     }
   });
 
+  const joinedContentsGroup = join(line, contentsGroup);
+
   if (headerGroup.length > 0 && contentsGroup.length > 0) {
     return group(
-      [group(join(line, headerGroup)), line, join(line, contentsGroup)],
+      [
+        group(join(line, headerGroup)),
+        shouldBreak
+          ? indent(group([line, joinedContentsGroup]))
+          : group([line, joinedContentsGroup]),
+        lastNodeIfBreak,
+      ],
       { shouldBreak: true },
     );
   } else {
@@ -1189,9 +1210,10 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     return indent(
       group([
         group([join(line, preGroup), line, join(softline, nameGroup)]),
-        join(softline, declArgs),
-        postGroup.length > 0 ? softline : "",
-        group(join(softline, postGroup)),
+        group([
+          join(softline, declArgs),
+          group(join(line, postGroup)),
+        ]),
       ]),
     );
   } else {
@@ -1386,14 +1408,9 @@ export function printNode(
         // ]);
 
         // let retDoc = [];
-        let firstItem = true;
         for (let i = 0; i < node.childCount; i++) {
           const nodeItem = pathCall(path, printFn, i);
           if (nodeIsNotEmpty(nodeItem)) {
-            if (!firstItem) {
-              retDoc.push(line);
-            }
-            firstItem = false;
             retDoc.push(nodeItem);
           }
         }
@@ -1405,7 +1422,8 @@ export function printNode(
           console.log(JSON.stringify(retDoc));
         }
 
-        if (retDoc.length > 0) retDoc = [retDoc, line];
+        if (retDoc.length > 0)
+          retDoc = group([join(line, retDoc), line], { shouldBreak: true });
         else retDoc = "";
         break;
       }
