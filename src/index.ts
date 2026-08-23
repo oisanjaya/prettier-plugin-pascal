@@ -1829,7 +1829,7 @@ export function printNode(
     nodeMaybeSpacedFromSibling &&
     node.startPosition.row - nodePrevSibling.endPosition.row > 1
   ) {
-    // retDoc = [hardline, retDoc];
+    retDoc = [hardline, retDoc];
   }
   return retDoc;
 }
