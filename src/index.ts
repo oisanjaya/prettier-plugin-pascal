@@ -428,8 +428,10 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   });
 
   const headerGroup = [
-    join(softline, nameGroup),
-    pathCall(path, printFn, nodeGroups[2][0]),
+    join(line, nameGroup),
+    Array.isArray(nodeGroups[2])
+      ? pathCall(path, printFn, nodeGroups[2][0])
+      : "",
   ];
 
   (nodeGroups[3] ?? []).forEach((i) => {
@@ -534,12 +536,12 @@ function printCagedItems(
     });
   }
 
-  if (openCageGroup.length > 0 && itemsGroup.length > 0) {
+  if (openCageGroup.length > 0) {
     return group(
       [
         group([
           join(line, preGroup),
-          preGroup.length > 0 ? softline : "",
+          preGroup.length > 0 ? line : "",
           beforeCageSeparator,
           join(softline, openCageGroup),
           afterCageSeparator,
@@ -666,8 +668,8 @@ function printDeclArray(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   nodeGroups[2].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
+    postGroup.push(nodeItem);
     if (nodeIsNotEmpty(nodeItem)) {
-      postGroup.push(nodeItem);
     }
   });
 
@@ -676,7 +678,7 @@ function printDeclArray(path: AstPath<TSNode>, printFn: PrintFn): Doc {
       join(line, preGroup),
       join(softline, rangeGroup),
       line,
-      postGroup,
+      join(line, postGroup),
     ]);
   } else {
     return "";
@@ -1210,10 +1212,7 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     return indent(
       group([
         group([join(line, preGroup), line, join(softline, nameGroup)]),
-        group([
-          join(softline, declArgs),
-          group(join(line, postGroup)),
-        ]),
+        group([join(softline, declArgs), group(join(line, postGroup))]),
       ]),
     );
   } else {
@@ -1536,7 +1535,10 @@ export function printNode(
         break;
       }
       case "declConsts": {
-        retDoc = printCagedItems(path, printFn, true, ["kConst"]);
+        retDoc = printCagedItems(path, printFn, true, [
+          "kConst",
+          "kResourcestring",
+        ]);
         break;
       }
       case "declVars": {
