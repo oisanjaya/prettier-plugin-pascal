@@ -370,7 +370,7 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const joinedContentsGroup = join(line, contentsGroup);
 
-  if (headerGroup.length > 0 && contentsGroup.length > 0) {
+  if (headerGroup.length > 0) {
     return group(
       [
         group(join(line, headerGroup)),
@@ -1366,7 +1366,6 @@ export function printNode(
 
   if (!node?.type) retDoc = "";
   else if (slurpedNodes.has(node.id)) retDoc = "";
-  else if (node.type === "asmBody") retDoc = node.text;
   else if (node.type === "operatorName" && node.parent?.type === "declProc")
     retDoc = node.text;
   else if (
@@ -1681,8 +1680,8 @@ export function printNode(
         retDoc = printCagedItems(
           path,
           printFn,
-          false,
-          ["asm"],
+          true,
+          ["kAsm"],
           ["kEnd"],
           softline,
           line,
@@ -1693,6 +1692,7 @@ export function printNode(
         retDoc = node.text;
         break;
       }
+      case "asmBody":
       case "varDef":
       case "varAssignDef":
       case "typeref":
