@@ -441,6 +441,7 @@ function printCagedItems(
   closingCage?: string[],
   beforeCageSeparator: Doc = softline,
   afterCageSeparator: Doc = softline,
+  afterBlockSeparator: Doc = softline,
 ): Doc {
   const node = path.getNode();
   if (!node) return "";
@@ -524,7 +525,7 @@ function printCagedItems(
         ]),
         indent([softline, join(softline, itemsGroup)]),
         closeCageGroup.length > 0 ? softline : "",
-        group([join(softline, closeCageGroup), softline]),
+        group([join(softline, closeCageGroup), afterBlockSeparator]),
         postGroup.length > 0
           ? group([softline, join(line, postGroup), line])
           : "",
@@ -572,7 +573,7 @@ function printHangingList(
     return group(
       [
         group([join(line, headerGroup)]),
-        indent([softline, join(softline, itemsGroup)]),
+        indent([softline, group(join(softline, itemsGroup))]),
       ],
       {
         shouldBreak: true,
@@ -821,8 +822,8 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   if (ifGroup.length > 0 && thenGroup.length > 0) {
     return group([
-      group([join(line, ifGroup), line]),
-      indent([softline, join(line, thenGroup)]),
+      indent(group([join(line, ifGroup)])),
+      indent([line, join(line, thenGroup)]),
       elseGroup.length > 0
         ? [
             line,
@@ -1227,14 +1228,14 @@ function printDeclProcRef(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 function printExpression(
   path: AstPath<TSNode>,
   printFn: PrintFn,
-  infix: string[],
+  operator: string[],
 ): Doc {
   const node = path.getNode();
   if (!node) return "";
 
   const targetTypes: GroupMarker[] = [
-    { type: "node", excludeMarker: true, retryNode: true, markers: infix },
-    { type: "node", markers: infix },
+    { type: "node", excludeMarker: true, retryNode: true, markers: operator },
+    { type: "node", markers: operator },
     { type: "until-end" },
   ];
 
@@ -1259,8 +1260,8 @@ function printExpression(
 
   if (leftGroup.length > 0 || rightGroup.length > 0) {
     return group([
-      group(join(line, leftGroup)),
-      pathCall(path, printFn, nodeGroups[1][0]),
+      group([join(line, leftGroup), pathCall(path, printFn, nodeGroups[1][0])]),
+      softline,
       group(join(line, rightGroup)),
     ]);
   } else {
@@ -1366,7 +1367,7 @@ export function printNode(
   } else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
     retDoc = node.text;
   else if (INLINE_OPERATORS.includes(node.type)) {
-    retDoc = [line, node.text, line];
+    retDoc = [line, node.text, ifBreak("",line)];
   } else if (SEPARATORS.has(node.type))
     retDoc = [node.text, node.parent?.type === "legacyFormat" ? "" : line];
   else {
@@ -1421,22 +1422,10 @@ export function printNode(
       case "initialization":
       case "finalization": {
         for (let i = 0; i < node.childCount; i++) {
-          if (
-            [
-              "kInterface",
-              "kImplementation",
-              "kInitialization",
-              "kFinalization",
-            ].includes(node.child(i)?.type ?? "")
-          ) {
-            retDoc.push([node.child(i)?.text ?? "", hardline]);
-          } else {
-            const nodeItem = pathCall(path, printFn, i);
-            // const nodeItem = "===" + node.type + " child " + i + " type " + node.child(i)?.type;
-            if (nodeIsNotEmpty(nodeItem)) retDoc.push(nodeItem);
-          }
+          const nodeItem = pathCall(path, printFn, i);
+          if (nodeIsNotEmpty(nodeItem)) retDoc.push(nodeItem);
         }
-        retDoc = group(retDoc);
+        retDoc = join(hardline, retDoc);
         break;
       }
       case "exprBinary": {
@@ -1466,6 +1455,7 @@ export function printNode(
           ["kRepeat"],
           ["kUntil"],
           softline,
+          line,
           line,
         );
         break;
@@ -1561,6 +1551,7 @@ export function printNode(
       case "recInitializer":
       case "arrInitializer":
       case "exprCall":
+      case "exprParens":
       case "declEnum":
       case "declArgs": {
         retDoc = printCagedItems(path, printFn, false, ["("], [")"]);
@@ -1661,7 +1652,7 @@ export function printNode(
         retDoc = printCagedItems(
           path,
           printFn,
-          false,
+          true,
           ["kBegin"],
           ["kEnd"],
           softline,
@@ -1738,7 +1729,6 @@ export function printNode(
       case "declString":
       case "defaultValue":
       case "exprDot":
-      case "exprParens":
       case "exprSubscript":
       case "exprTpl":
       case "genericDot":
