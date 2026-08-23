@@ -55,6 +55,7 @@ type GroupMarker =
 
 const SEPARATORS = new Set([",", ";", ":"]);
 const BINARY_OPERATORS = [
+  "kAs",
   "kAdd",
   "kAnd",
   "kDiv",
@@ -89,7 +90,6 @@ const INLINE_OPERATORS = [
   ...BINARY_OPERATORS,
   ...UNARY_OPERATORS,
   ...ASSIGNMENT_OPERATORS,
-  "kAs",
 ];
 const DECLARABLE_OPERATORS = [
   "kAdd",
