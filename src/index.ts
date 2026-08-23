@@ -541,8 +541,7 @@ function printCagedItems(
       [
         group([
           join(line, preGroup),
-          preGroup.length > 0 ? line : "",
-          beforeCageSeparator,
+          preGroup.length > 0 ? beforeCageSeparator : "",
           join(softline, openCageGroup),
           afterCageSeparator,
         ]),
