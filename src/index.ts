@@ -923,7 +923,6 @@ function printDoBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   const whileGroup: Doc = [];
   const postGroup: Doc = [];
-  let postGroupArr: Doc[] = [];
 
   nodeGroups[0].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
@@ -932,21 +931,18 @@ function printDoBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
-  let statementIsBlock = false;
   (nodeGroups[1] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      postGroupArr.push(nodeItem);
-      if (node.child(i)?.type === "block") {
-        statementIsBlock = true;
-      }
+      postGroup.push(nodeItem);
     }
   });
 
-  if (whileGroup.length > 0 && postGroupArr.length > 0) {
-    if (statementIsBlock) postGroup.push(group([line, postGroupArr]));
-    else postGroup.push(indent([line, postGroupArr]));
-    return group([group(join(line, whileGroup)), postGroup]);
+  if (whileGroup.length > 0 && postGroup.length > 0) {
+    return group([
+      group(join(line, whileGroup)),
+      indent(group([line, postGroup])),
+    ]);
   } else {
     return "";
   }
@@ -1320,10 +1316,12 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   if (headerGroup.length > 0) {
     return group([
       group(join(line, headerGroup)),
-      localGroup.length > 0 ? softline : "",
-      group(join(softline, localGroup)),
-      postGroup.length > 0 ? softline : "",
-      join(softline, postGroup),
+      indent([
+        localGroup.length > 0 ? softline : "",
+        group(join(softline, localGroup)),
+        postGroup.length > 0 ? softline : "",
+        join(softline, postGroup),
+      ]),
     ]);
   } else {
     return "";
@@ -1367,7 +1365,7 @@ export function printNode(
   } else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
     retDoc = node.text;
   else if (INLINE_OPERATORS.includes(node.type)) {
-    retDoc = [line, node.text, ifBreak("",line)];
+    retDoc = [line, node.text, ifBreak("", line)];
   } else if (SEPARATORS.has(node.type))
     retDoc = [node.text, node.parent?.type === "legacyFormat" ? "" : line];
   else {
