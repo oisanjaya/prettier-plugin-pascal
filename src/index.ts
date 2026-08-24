@@ -1007,7 +1007,7 @@ function printCaseCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
-  if (preGroup.length > 0 && postGroup.length > 0) {
+  if (preGroup.length > 0) {
     return group([
       group(join(line, preGroup)),
       indent(group([ifBreak(line, ""), join(line, postGroup)])),
