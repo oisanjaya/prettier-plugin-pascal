@@ -8,7 +8,7 @@ Prettier is an opinionated code formatter. It parses your code and reprints it u
 
 This plugin adds support for the Pascal language to Prettier.
 
-It uses [Tree-sitter](https://tree-sitter.github.io/tree-sitter/) to parse Pascal source code and generates Prettier's document structure from the resulting syntax tree.
+It uses [tree-sitter-pascal](https://github.com/jimmckeeth/tree-sitter-pascal) to parse Pascal source code and generates Prettier's document structure from the resulting syntax tree.
 
 ### Input
 
@@ -36,19 +36,18 @@ end.
 
 ```pascal
 program HelloWorld;
-
-var
-  x, y: Integer;
+  var
+    x, y: Integer;
 
 begin
-  Writeln('Hello World!');
+  writeln('Hello World!');
 
   if x > y then
-  begin
-    Writeln('x is greater');
-  end
+    begin
+      writeln('x is greater');
+    end
   else
-    Writeln('y is greater');
+    writeln('y is greater');
 end.
 ```
 
@@ -82,8 +81,6 @@ Yarn:
 yarn exec prettier --plugin=prettier-plugin-pascal --write "**/*.{pas,pascal,pp}"
 ```
 
-Prettier can also discover the plugin automatically when it is installed as a project dependency.
-
 ### Supported Extensions
 
 The plugin currently targets these Pascal file extensions:
@@ -111,7 +108,7 @@ Formatting coverage is still evolving, and some advanced Pascal/Delphi/FPC const
 
 ## Development
 
-The plugin uses a precompiled Tree-sitter Pascal WebAssembly parser. The parser binary is bundled into the published package, so users do not need to install or compile the Pascal grammar separately.
+The plugin uses a precompiled tree-sitter-pascal pinned at [v0.11.0.9e9f070 release](https://github.com/jimmckeeth/tree-sitter-pascal/releases/download/v0.11.0-9e9f070/tree-sitter-pascal.wasm) WebAssembly parser. The parser binary is bundled into the published package, so users do not need to install or compile the Pascal grammar separately.
 
 The project can be built with:
 
