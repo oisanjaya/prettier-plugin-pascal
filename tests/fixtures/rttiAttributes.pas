@@ -1,0 +1,3 @@
+type
+  [Serializable]
+  T = Integer;
