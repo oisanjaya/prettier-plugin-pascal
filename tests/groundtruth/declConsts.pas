@@ -1,3 +1,3 @@
 const
-  X= 42;
-  X: Integer= 42;
+  X = 42;
+  X: Integer = 42;
