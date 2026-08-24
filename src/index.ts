@@ -259,7 +259,7 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
       nodeDoc = group([
         nodeDoc,
         childNextSibling?.text ?? "",
-        node?.type === "exceptionHandler" ? "" : line,
+        ["exceptionHandler", "declVariant"].includes(node?.type) ? "" : line,
       ]);
     } else if (
       childNextSibling?.type === "comment" &&
@@ -428,7 +428,7 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   });
 
   const headerGroup = [
-    join(line, nameGroup),
+    join(softline, nameGroup),
     Array.isArray(groupingIndexes[2])
       ? pathCall(path, printFn, groupingIndexes[2][0])
       : "",
@@ -447,9 +447,15 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
         group(join(line, preGroup)),
         preGroup.length > 0 ? line : "",
         group(headerGroup),
-        softline,
       ]),
-      indent([softline, join(line, postGroup)]),
+      indent([
+        ["declClass", "declHelper", "declIntf"].includes(
+          node.child((groupingIndexes[3] ?? [])[0])?.type ?? "",
+        )
+          ? ""
+          : softline,
+        join(line, postGroup),
+      ]),
     ]);
   } else {
     return "";
@@ -1276,7 +1282,10 @@ function printExpression(
 
   if (leftGroup.length > 0 || rightGroup.length > 0) {
     return group([
-      group([join(line, leftGroup), pathCall(path, printFn, groupingIndexes[1][0])]),
+      group([
+        join(line, leftGroup),
+        pathCall(path, printFn, groupingIndexes[1][0]),
+      ]),
       softline,
       group(join(line, rightGroup)),
     ]);
@@ -1373,6 +1382,11 @@ export function printNode(
     node.parent?.parent?.type === "genericDot"
   )
     retDoc = node.text;
+  else if (
+    UNARY_OPERATORS.includes(node.type) &&
+    node.parent?.type === "exprUnary"
+  )
+    retDoc = node.text;
   else if (["kGt", "kLt"].includes(node.type)) {
     if (["exprBinary", "operatorName"].includes(node.parent?.type ?? "")) {
       retDoc = [line, node.text, line];
@@ -1383,6 +1397,8 @@ export function printNode(
     retDoc = node.text;
   } else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
     retDoc = node.text;
+  else if (node.type === "kEq" && node.parent?.type === "defaultValue")
+    retDoc = [node.text, line];
   else if (INLINE_OPERATORS.includes(node.type)) {
     retDoc = [line, node.text, ifBreak("", line)];
   } else if (SEPARATORS.has(node.type))
@@ -1574,7 +1590,14 @@ export function printNode(
         break;
       }
       case "declHelper": {
-        retDoc = printCagedItems(path, printFn, true, ["typeref"], ["kEnd"]);
+        retDoc = printCagedItems(
+          path,
+          printFn,
+          true,
+          ["typeref"],
+          ["kEnd"],
+          line,
+        );
         break;
       }
       case "declIntf": {
@@ -1587,7 +1610,6 @@ export function printNode(
         );
         break;
       }
-      case "declMetaClass":
       case "declClass": {
         retDoc = printDeclClass(path, printFn);
         break;
@@ -1699,6 +1721,7 @@ export function printNode(
       case "exprIf":
       case "declSet":
       case "declExport":
+      case "declMetaClass":
       case "declFile":
       case "inherited":
       case "procAttribute":
@@ -1736,7 +1759,13 @@ export function printNode(
         break;
       }
       case "comment": {
-        retDoc = node.text;
+        if (
+          node.text.startsWith("//") &&
+          node.previousSibling &&
+          node.previousSibling?.endPosition.row === node.startPosition.row
+        )
+          retDoc = "";
+        else retDoc = node.text;
         break;
       }
       case "caseLabel":
