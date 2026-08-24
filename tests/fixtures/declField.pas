@@ -1,4 +1,4 @@
 type
   TClass = class
-      X: Integer;
-    end;
+    X: Integer;
+  end;

@@ -1,1 +1,4 @@
-unit A.B.C;  interface implementation end.
+unit A.B.C;
+interface
+implementation
+end.

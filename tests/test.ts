@@ -6,6 +6,7 @@ import { readFile, readdir } from "node:fs/promises";
 import path from "node:path";
 
 const FIXTURES_DIR = "tests/fixtures";
+const GROUNDTRUTH_DIR = "tests/groundtruth";
 
 async function formatPascal(code: string): Promise<string> {
   return await prettier.format(code, {
@@ -28,8 +29,9 @@ test("Pascal Prettier Plugin Test Suite", async (t) => {
   for (const fixture of files) {
     await t.test(`testing ${fixture}`, async () => {
       const source = await readFile(path.join(FIXTURES_DIR, fixture), "utf8");
+      const expected = await readFile(path.join(GROUNDTRUTH_DIR, fixture), "utf8");
       const result = await formatPascal(source);
-      assert.equal(result, source);
+      assert.equal(result, expected);
     });
   }
 });

@@ -1,7 +1,4 @@
 program TyperefDotTest;
-  var
-    x: System.Types.Integer;
+var x: System.Types.Integer;
 begin
-
 end.
-

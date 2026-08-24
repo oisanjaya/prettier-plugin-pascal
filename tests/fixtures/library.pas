@@ -1,5 +1,3 @@
 library LibraryTest;
 begin
-
 end.
-

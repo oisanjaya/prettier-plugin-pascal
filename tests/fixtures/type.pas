@@ -1,7 +1,4 @@
 program TypeTest;
-  var
-    x: Integer;
+var x: Integer;
 begin
-
 end.
-

@@ -1,2 +1,1 @@
-type
-  Foo.Bar = Integer;
+type Foo.Bar = Integer;

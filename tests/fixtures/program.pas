@@ -1,5 +1,3 @@
 program ProgramTest;
 begin
-
 end.
-

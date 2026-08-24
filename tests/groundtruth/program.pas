@@ -1,0 +1,4 @@
+program ProgramTest;
+begin
+end.
+

@@ -1,5 +1,4 @@
 program VarDefTest;
 begin
-  var x:  Integer;
+  var x: Integer;
 end.
-

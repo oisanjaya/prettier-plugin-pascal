@@ -1,4 +1,2 @@
 type
-  IThing = interface
-
-    end;
+  IThing = interface end;

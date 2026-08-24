@@ -1,7 +1,4 @@
 program TyperefPtrTest;
-  var
-    x: ^Integer;
+var x: ^Integer;
 begin
-
 end.
-

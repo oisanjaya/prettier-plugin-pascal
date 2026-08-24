@@ -1,3 +1,1 @@
-type
-  TClass = class
-    end;
+type TClass = class end;

@@ -1,0 +1,3 @@
+type
+  IThing = interface
+    end;

@@ -1,2 +1,1 @@
-type
-  TArray = array[1..10] of Integer;
+type TArray = array[1..10] of Integer;

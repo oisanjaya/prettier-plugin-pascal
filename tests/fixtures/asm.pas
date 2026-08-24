@@ -1,7 +1,4 @@
 program AsmTest;
 begin
-  asm
-    mov eax ebx
-  end;
+  asm mov eax, ebx end;
 end.
-

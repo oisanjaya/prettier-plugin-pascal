@@ -1,2 +1,1 @@
-type
-  Pair<A: Integer> = Integer;
+type Pair<A: Integer> = Integer;

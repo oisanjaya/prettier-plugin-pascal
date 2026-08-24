@@ -1,7 +1,2 @@
 type
-  THelper = class helper for TObject
-
-
-
-
-    end;
+  THelper = class helper for TObject end;

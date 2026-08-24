@@ -1,3 +1,2 @@
 type
-  [Serializable]
-  T = Integer;
+  [Serializable] T = Integer;

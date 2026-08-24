@@ -1,2 +1,1 @@
-uses
-  SysUtils;
+uses SysUtils;

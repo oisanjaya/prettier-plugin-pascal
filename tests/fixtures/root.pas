@@ -1,5 +1,3 @@
 program RootTest;
 begin
-
 end.
-

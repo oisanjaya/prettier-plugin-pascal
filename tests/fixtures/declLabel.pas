@@ -1,2 +1,1 @@
-label
-  L1;
+label L1;

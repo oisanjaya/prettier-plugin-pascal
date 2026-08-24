@@ -1,1 +1,6 @@
-unit UnitTest;  interface implementation initialization finalization end.
+unit UnitTest;
+interface
+implementation
+initialization
+finalization
+end.

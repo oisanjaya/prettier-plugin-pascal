@@ -1,0 +1,4 @@
+program RootTest;
+begin
+end.
+

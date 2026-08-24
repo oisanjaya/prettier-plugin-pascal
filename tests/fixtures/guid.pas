@@ -1,4 +1,2 @@
 type
-  IThing = interface
-      [TGuid]
-    end;
+  IThing = interface [TGuid] end;

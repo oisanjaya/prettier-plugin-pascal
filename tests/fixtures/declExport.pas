@@ -1,2 +1,1 @@
-exports
-  Foo name Bar;
+exports Foo name Bar;
