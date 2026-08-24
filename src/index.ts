@@ -693,6 +693,48 @@ function printDeclArray(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 }
 
+function printDefaultValue(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  let groupingIndexes: number[][];
+
+  const targetTypes: GroupMarker[] = [
+    {
+      type: "node",
+      markers: ["kEq"],
+    },
+    { type: "until-end" },
+  ];
+
+  groupingIndexes = buildGrouping(node, targetTypes);
+
+  const eqGroup: Doc = [];
+  const valueGroup: Doc = [];
+
+  groupingIndexes[0].forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeIsNotEmpty(nodeItem)) {
+      eqGroup.push(nodeItem);
+    }
+  });
+
+  groupingIndexes[1].forEach((i) => {
+    const nodeItem = pathCall(path, printFn, i);
+    if (nodeIsNotEmpty(nodeItem)) {
+      valueGroup.push(nodeItem);
+    }
+  });
+
+  if (eqGroup.length > 0 && valueGroup.length > 0) {
+    return group([
+      [join(softline, eqGroup), ifBreak(" ", softline), join(softline, valueGroup)],
+    ]);
+  } else {
+    return "";
+  }
+}
+
 function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
@@ -1426,7 +1468,7 @@ export function printNode(
   } else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
     retDoc = node.text; // theese operators need no spaces
   else if (node.type === "kEq" && node.parent?.type === "defaultValue")
-    retDoc = [node.text, line]; // special case for defaultValue, they has their own space
+    retDoc = [node.text, ifBreak("", line)]; // special case for defaultValue, they has their own space
   else if (INLINE_OPERATORS.includes(node.type)) {
     retDoc = [line, node.text, ifBreak("", line)];
   } else if (SEPARATORS.has(node.type))
@@ -1766,12 +1808,15 @@ export function printNode(
         else retDoc = node.text;
         break;
       }
+      case "defaultValue": {
+        retDoc = printDefaultValue(path, printFn);
+        break;
+      }
       case "caseLabel":
       case "declConst":
       case "declEnumValue":
       case "declLabel":
       case "declString":
-      case "defaultValue":
       case "exprDot":
       case "exprSubscript":
       case "exprTpl":
@@ -1790,13 +1835,24 @@ export function printNode(
       case "typerefDot":
       case "typerefPtr":
       case "typerefTpl": {
+        let firstItem = true;
         const retArr = [];
         for (let i = 0; i < node.childCount; i++) {
           const pathCallRes = pathCall(path, printFn, i);
-          if (pathCallRes !== "") retArr.push(pathCallRes);
+          if (pathCallRes !== "") {
+            if (!firstItem) {
+              if (node.child(i)?.type !== "defaultValue") {
+                retArr.push(softline);
+              } else {
+                retArr.push(" ");
+              }
+            }
+            firstItem = false;
+            retArr.push(pathCallRes);
+          }
         }
         if (retArr.length > 0)
-          retDoc = group(join(softline, retArr), {
+          retDoc = group(retArr, {
             shouldBreak: node.type === "statements",
           });
         break;
