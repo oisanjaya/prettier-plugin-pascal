@@ -1373,6 +1373,26 @@ export function printNode(
 
   let retDoc: Doc = [];
 
+  let rttiAttributesInNode: number[] = [];
+  if (
+    [
+      "declType",
+      "declProc",
+      "declVar",
+      "declConst",
+      "declField",
+      "declProp",
+    ].includes(node.type)
+  ) {
+    for (let i = 0; i < node.childCount; i++) {
+      if (node.child(i)?.type === "rttiAttributes") {
+        rttiAttributesInNode.push(i);
+        slurpedNodes.add(node.child(i)?.id ?? -100);
+        break;
+      }
+    }
+  }
+
   if (!node?.type)
     retDoc = ""; // skip broken AST node
   else if (slurpedNodes.has(node.id))
@@ -1657,22 +1677,6 @@ export function printNode(
         }
         break;
       }
-      case "rttiAttributes": {
-        retDoc = [
-          hardline,
-          printCagedItems(
-            path,
-            printFn,
-            false,
-            ["["],
-            ["]"],
-            softline,
-            softline,
-          ),
-          hardline,
-        ];
-        break;
-      }
       case "defProc": {
         retDoc = printDefProc(path, printFn);
         break;
@@ -1850,6 +1854,15 @@ export function printNode(
   ) {
     retDoc = [hardline, retDoc];
   }
+
+  if (rttiAttributesInNode.length > 0) {
+    retDoc = [
+      ...rttiAttributesInNode.map((idx) => node.child(idx)?.text ?? ""),
+      hardline,
+      retDoc,
+    ];
+  }
+
   return retDoc;
 }
 
