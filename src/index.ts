@@ -551,7 +551,10 @@ function printCagedItems(
           join(softline, openCageGroup),
           afterCageSeparator,
         ]),
-        indent([softline, join(softline, itemsGroup)]),
+        indent([
+          itemsGroup.length > 0 ? softline : "",
+          join(softline, itemsGroup),
+        ]),
         closeCageGroup.length > 0 ? softline : "",
         group([join(softline, closeCageGroup), afterBlockSeparator]),
         postGroup.length > 0
