@@ -1840,7 +1840,8 @@ export function printNode(
   const nodePrevSibling = node.previousSibling;
   const parentType = node.parent?.type;
   const nodeMaybeSpacedFromSibling =
-    [
+    node.type !== "label" &&
+    ([
       "program",
       "unit",
       "library",
@@ -1849,7 +1850,8 @@ export function printNode(
       "implementation",
       "initialization",
       "finalization",
-    ].includes(parentType ?? "") || parentType?.startsWith("decl");
+    ].includes(parentType ?? "") ||
+      parentType?.startsWith("decl"));
   if (
     nodePrevSibling &&
     nodeMaybeSpacedFromSibling &&
