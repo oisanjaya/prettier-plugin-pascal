@@ -1373,54 +1373,45 @@ export function printNode(
 
   let retDoc: Doc = [];
 
-  if (!node?.type) retDoc = "";
-  else if (slurpedNodes.has(node.id)) retDoc = "";
+  if (!node?.type)
+    retDoc = ""; // skip broken AST node
+  else if (slurpedNodes.has(node.id))
+    retDoc = ""; // skip slurped nodes; slurping node handling them
   else if (node.type === "operatorName" && node.parent?.type === "declProc")
+    // for operator override declaration no space around operator
     retDoc = node.text;
   else if (
     DECLARABLE_OPERATORS.includes(node.type) &&
     node.parent?.parent?.type === "genericDot"
   )
+    // case where dot used in generics
     retDoc = node.text;
   else if (
     UNARY_OPERATORS.includes(node.type) &&
     node.parent?.type === "exprUnary"
   )
+    // for exprUnary don't add space around operator
     retDoc = node.text;
   else if (["kGt", "kLt"].includes(node.type)) {
     if (["exprBinary", "operatorName"].includes(node.parent?.type ?? "")) {
-      retDoc = [line, node.text, line];
+      retDoc = [line, node.text, line]; // kGt and kLt as operator
     } else {
-      retDoc = node.text;
+      retDoc = node.text; // kGt and kLt as language token
     }
   } else if (node.type === "kIn" && (node.parent?.type ?? "") === "foreach") {
-    retDoc = node.text;
+    retDoc = node.text; // foreach has their own space, don't add extra space
   } else if (["kDot", "kHat", "kAt", ".."].includes(node.type))
-    retDoc = node.text;
+    retDoc = node.text; // theese operators need no spaces
   else if (node.type === "kEq" && node.parent?.type === "defaultValue")
-    retDoc = [node.text, line];
+    retDoc = [node.text, line]; // special case for defaultValue, they has their own space
   else if (INLINE_OPERATORS.includes(node.type)) {
     retDoc = [line, node.text, ifBreak("", line)];
   } else if (SEPARATORS.has(node.type))
+    // special case for legacyFormat, no need extra line
     retDoc = [node.text, node.parent?.type === "legacyFormat" ? "" : line];
   else {
     switch (node.type) {
       case "root": {
-        // retDoc = group([
-        //   group(["begin", line]),
-        //   indent([
-        //     softline,
-        //     group(["writeln1", ";", line]),
-        //     softline,
-        //     group(["writeln2", ";", line]),
-        //     softline,
-        //     group(["writeln3", ";", line]),
-        //   ]),
-        //   softline,
-        //   group(["end", ";", line]),
-        // ]);
-
-        // let retDoc = [];
         for (let i = 0; i < node.childCount; i++) {
           const nodeItem = pathCall(path, printFn, i);
           if (nodeIsNotEmpty(nodeItem)) {
