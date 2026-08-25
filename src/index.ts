@@ -1521,6 +1521,10 @@ export function printNode(
         retDoc = join(hardline, retDoc);
         break;
       }
+      case "exprDot":{
+        retDoc = printExpression(path, printFn, ["kDot"]);
+        break;
+      }
       case "exprBinary": {
         retDoc = printExpression(path, printFn, BINARY_OPERATORS);
         break;
@@ -1825,7 +1829,6 @@ export function printNode(
       case "declEnumValue":
       case "declLabel":
       case "declString":
-      case "exprDot":
       case "exprSubscript":
       case "exprTpl":
       case "genericDot":
