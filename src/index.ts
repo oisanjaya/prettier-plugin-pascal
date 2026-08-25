@@ -17,6 +17,7 @@ const {
   hardline,
   softline,
   indent,
+  dedent,
   ifBreak,
   dedentToRoot,
   lineSuffix,
@@ -825,6 +826,12 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const targetTypes: GroupMarker[] = [
     {
       type: "node",
+      excludeMarker: true,
+      retryNode: true,
+      markers: ["kThen"],
+    },
+    {
+      type: "node",
       markers: ["kThen"],
     },
     {
@@ -860,21 +867,21 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
-  groupingIndexes[1].forEach((i) => {
+  groupingIndexes[2].forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
       thenGroup.push(nodeItem);
     }
   });
 
-  (groupingIndexes[3] ?? []).forEach((i) => {
+  (groupingIndexes[4] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
       elseGroup.push(nodeItem);
     }
   });
 
-  (groupingIndexes[4] ?? []).forEach((i) => {
+  (groupingIndexes[5] ?? []).forEach((i) => {
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
       postGroup.push(nodeItem);
@@ -883,12 +890,16 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   if (ifGroup.length > 0 && thenGroup.length > 0) {
     return group([
-      indent(group([join(line, ifGroup)])),
+      group([
+        indent(group([join(line, ifGroup)])),
+        line,
+        pathCall(path, printFn, groupingIndexes[1][0]),
+      ]),
       indent([line, join(line, thenGroup)]),
       elseGroup.length > 0
         ? [
             line,
-            pathCall(path, printFn, groupingIndexes[2][0]),
+            pathCall(path, printFn, groupingIndexes[3][0]),
             indent([line, join(line, elseGroup)]),
           ]
         : "",
