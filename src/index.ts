@@ -1319,8 +1319,7 @@ function printExpression(
         join(line, leftGroup),
         pathCall(path, printFn, groupingIndexes[1][0]),
       ]),
-      softline,
-      group(join(line, rightGroup)),
+      indent([softline, group(join(line, rightGroup))]),
     ]);
   } else {
     return "";
@@ -1478,7 +1477,7 @@ export function printNode(
   else if (node.type === "kEq" && node.parent?.type === "defaultValue")
     retDoc = [node.text, ifBreak("", line)]; // special case for defaultValue, they has their own space
   else if (INLINE_OPERATORS.includes(node.type)) {
-    retDoc = [line, node.text, ifBreak("", line)];
+    retDoc = [" ", node.text, " "];
   } else if (SEPARATORS.has(node.type))
     // special case for legacyFormat, no need extra line
     retDoc = [node.text, node.parent?.type === "legacyFormat" ? "" : line];
@@ -1521,7 +1520,7 @@ export function printNode(
         retDoc = join(hardline, retDoc);
         break;
       }
-      case "exprDot":{
+      case "exprDot": {
         retDoc = printExpression(path, printFn, ["kDot"]);
         break;
       }
