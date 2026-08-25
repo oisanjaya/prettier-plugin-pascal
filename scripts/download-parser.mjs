@@ -2,13 +2,17 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile } from "node:fs/promises";
 import { dirname, resolve } from "node:path";
 
+// const EXPECTED_SHA256 =
+//   "94c9d6b882f4c673f5165fae766666efaa11b0c7345b414687f2712428a140fb";
+// const PASCAL_PARSER_VERSION = "v0.11.0-9e9f070";
+// const URL =
+//   "https://github.com/jimmckeeth/tree-sitter-pascal/releases/download/" +
+//   `${PASCAL_PARSER_VERSION}/tree-sitter-pascal.wasm`;
 const EXPECTED_SHA256 =
-  "94c9d6b882f4c673f5165fae766666efaa11b0c7345b414687f2712428a140fb";
-
-const PASCAL_PARSER_VERSION = "v0.11.0-9e9f070";
+  "91480e0c929c16b15d2a6b065990ffdccd05689103fcfcd0a643211873e2b3cf";
 const URL =
-  "https://github.com/jimmckeeth/tree-sitter-pascal/releases/download/" +
-  `${PASCAL_PARSER_VERSION}/tree-sitter-pascal.wasm`;
+  "https://github.com/oisanjaya/tree-sitter-pascal/releases/download/" +
+  "v0.11.1-086f1fd/tree-sitter-pascal.wasm";
 
 const output = resolve("dist/tree-sitter-pascal.wasm");
 
