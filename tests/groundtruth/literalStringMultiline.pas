@@ -3,4 +3,3 @@ begin
   WriteLn('''hello
 world''');
 end.
-

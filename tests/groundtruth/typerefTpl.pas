@@ -1,6 +1,5 @@
 program TyperefTplTest;
-  var
-    x: TList<Integer>;
+var
+  x: TList<Integer>;
 begin
 end.
-

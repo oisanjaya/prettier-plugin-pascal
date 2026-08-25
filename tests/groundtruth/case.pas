@@ -5,4 +5,3 @@ begin
     else y := 2;
   end;
 end.
-

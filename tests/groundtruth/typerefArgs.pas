@@ -1,6 +1,5 @@
 program TyperefArgsTest;
-  var
-    x: TPair<Integer, String>;
+var
+  x: TPair<Integer, String>;
 begin
 end.
-

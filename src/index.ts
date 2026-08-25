@@ -348,36 +348,20 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
-  let lastNodeIfBreak: Doc = "";
-  let shouldBreak = false;
   groupingIndexes[1].forEach((i) => {
-    if (shouldBreak) return;
     const nodeItem = pathCall(path, printFn, i);
     if (nodeIsNotEmpty(nodeItem)) {
-      if (node.child(i)?.type === "block") {
-        shouldBreak = true;
-        lastNodeIfBreak = [
-          line,
-          nodeItem,
-          line,
-          pathCall(path, printFn, node.childCount - 1),
-        ];
-        return;
-      }
       contentsGroup.push(nodeItem);
     }
   });
 
-  const joinedContentsGroup = join(line, contentsGroup);
+  // const joinedContentsGroup = join(line, contentsGroup);
 
   if (headerGroup.length > 0) {
     return group(
       [
         group(join(line, headerGroup)),
-        shouldBreak
-          ? indent(group([line, joinedContentsGroup]))
-          : group([line, joinedContentsGroup]),
-        lastNodeIfBreak,
+        group([line, join(line, contentsGroup)]),
       ],
       { shouldBreak: true },
     );
@@ -728,7 +712,11 @@ function printDefaultValue(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   if (eqGroup.length > 0 && valueGroup.length > 0) {
     return group([
-      [join(softline, eqGroup), ifBreak(" ", softline), join(softline, valueGroup)],
+      [
+        join(softline, eqGroup),
+        ifBreak(" ", softline),
+        join(softline, valueGroup),
+      ],
     ]);
   } else {
     return "";
@@ -1339,7 +1327,11 @@ function printExpression(
   }
 }
 
-function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+function printDefProc(
+  path: AstPath<TSNode>,
+  printFn: PrintFn,
+  options: object,
+): Doc {
   const node = path.getNode();
   if (!node) return "";
   const headerGroup: Doc[] = [];
@@ -1387,16 +1379,32 @@ function printDefProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     }
   });
 
+  const finalGroup: Doc = group(
+    [
+      join(line, headerGroup),
+      localGroup.length > 0 ? softline : "",
+      group(join(softline, localGroup)),
+      postGroup.length > 0 ? softline : "",
+      join(softline, postGroup),
+    ],
+    { shouldBreak: true },
+  );
+
+  const finalDoc: Doc = [
+    "interface",
+    "implementation",
+    "initialization",
+    "finalization",
+    "program",
+    "library",
+    "unit",
+    "root",
+  ].includes(node.parent?.type ?? "")
+    ? group(finalGroup)
+    : indent([" ".repeat((options as any)["tabWidth"]), finalGroup]);
+
   if (headerGroup.length > 0) {
-    return group([
-      group(join(line, headerGroup)),
-      indent([
-        localGroup.length > 0 ? softline : "",
-        group(join(softline, localGroup)),
-        postGroup.length > 0 ? softline : "",
-        join(softline, postGroup),
-      ]),
-    ]);
+    return finalDoc;
   } else {
     return "";
   }
@@ -1723,7 +1731,7 @@ export function printNode(
         break;
       }
       case "defProc": {
-        retDoc = printDefProc(path, printFn);
+        retDoc = printDefProc(path, printFn, options);
         break;
       }
       case "block": {
@@ -1894,20 +1902,7 @@ export function printNode(
   }
 
   const nodePrevSibling = node.previousSibling;
-  const parentType = node.parent?.type;
-  const nodeMaybeSpacedFromSibling =
-    node.type !== "label" &&
-    ([
-      "program",
-      "unit",
-      "library",
-      "block",
-      "interface",
-      "implementation",
-      "initialization",
-      "finalization",
-    ].includes(parentType ?? "") ||
-      parentType?.startsWith("decl"));
+  const nodeMaybeSpacedFromSibling = node.type !== "label";
   if (
     nodePrevSibling &&
     nodeMaybeSpacedFromSibling &&

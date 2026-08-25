@@ -6,4 +6,3 @@ begin
     on E: Exception do raise E;
   end;
 end.
-

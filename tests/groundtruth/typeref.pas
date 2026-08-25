@@ -1,6 +1,5 @@
 program TyperefTest;
-  var
-    x: MyType;
+var
+  x: MyType;
 begin
 end.
-

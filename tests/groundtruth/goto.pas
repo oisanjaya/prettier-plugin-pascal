@@ -5,4 +5,3 @@ begin
 L1:
   writeln;
 end.
-

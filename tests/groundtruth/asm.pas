@@ -4,4 +4,3 @@ begin
     mov eax ebx
   end;
 end.
-
