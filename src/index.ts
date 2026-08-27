@@ -55,7 +55,7 @@ type GroupMarker =
   NodeMarker | FieldMarker | UntilFieldChanges | { type: "until-end" };
 
 const SEPARATORS = new Set([",", ";", ":"]);
-const BINARY_OPERATORS = [
+const BINARY_OPERATORS = new Set([
   "kAs",
   "kAdd",
   "kAnd",
@@ -78,21 +78,21 @@ const BINARY_OPERATORS = [
   "kShr",
   "kSub",
   "kXor",
-];
-const UNARY_OPERATORS = ["kAdd", "kAt", "kHat", "kNot", "kSub"];
-const ASSIGNMENT_OPERATORS = [
+]);
+const UNARY_OPERATORS = new Set(["kAdd", "kAt", "kHat", "kNot", "kSub"]);
+const ASSIGNMENT_OPERATORS = new Set([
   "kAssign",
   "kAssignAdd",
   "kAssignDiv",
   "kAssignMul",
   "kAssignSub",
-];
-const INLINE_OPERATORS = [
+]);
+const INLINE_OPERATORS = new Set([
   ...BINARY_OPERATORS,
   ...UNARY_OPERATORS,
   ...ASSIGNMENT_OPERATORS,
-];
-const DECLARABLE_OPERATORS = [
+]);
+const DECLARABLE_OPERATORS = new Set([
   "kAdd",
   "kAnd",
   "kAssign",
@@ -114,9 +114,9 @@ const DECLARABLE_OPERATORS = [
   "kShr",
   "kSub",
   "kXor",
-];
+]);
 
-const INLINE_NODES = new Set([
+const NON_STANDALONE_NODES = new Set([
   "label",
 
   "identifier",
@@ -1573,13 +1573,13 @@ export function printNode(
     // for operator override declaration no space around operator
     retDoc = node.text;
   else if (
-    DECLARABLE_OPERATORS.includes(node.type) &&
+    DECLARABLE_OPERATORS.has(node.type) &&
     node.parent?.parent?.type === "genericDot"
   )
     // case where dot used in generics
     retDoc = node.text;
   else if (
-    UNARY_OPERATORS.includes(node.type) &&
+    UNARY_OPERATORS.has(node.type) &&
     node.parent?.type === "exprUnary"
   )
     // for exprUnary don't add space around operator
@@ -1596,7 +1596,7 @@ export function printNode(
     retDoc = node.text; // theese operators need no spaces
   else if (node.type === "kEq" && node.parent?.type === "defaultValue")
     retDoc = [node.text, ifBreak("", line)]; // special case for defaultValue, they has their own space
-  else if (INLINE_OPERATORS.includes(node.type)) {
+  else if (INLINE_OPERATORS.has(node.type)) {
     retDoc = [" ", node.text, " "];
   } else if (SEPARATORS.has(node.type))
     // special case for legacyFormat, no need extra line
@@ -1645,15 +1645,15 @@ export function printNode(
         break;
       }
       case "exprBinary": {
-        retDoc = printExpression(path, printFn, BINARY_OPERATORS);
+        retDoc = printExpression(path, printFn, Array.from(BINARY_OPERATORS));
         break;
       }
       case "exprUnary": {
-        retDoc = printExpression(path, printFn, UNARY_OPERATORS);
+        retDoc = printExpression(path, printFn, Array.from(UNARY_OPERATORS));
         break;
       }
       case "assignment": {
-        retDoc = printExpression(path, printFn, ASSIGNMENT_OPERATORS);
+        retDoc = printExpression(path, printFn, Array.from(ASSIGNMENT_OPERATORS));
         break;
       }
       case "exprTpl": {
@@ -2031,7 +2031,7 @@ export function printNode(
   const nodePrevSibling = node.previousSibling;
   if (
     nodePrevSibling &&
-    !INLINE_NODES.has(node.type) &&
+    !NON_STANDALONE_NODES.has(node.type) &&
     node.startPosition.row - nodePrevSibling.endPosition.row > 1
   ) {
     retDoc = [hardline, retDoc];
