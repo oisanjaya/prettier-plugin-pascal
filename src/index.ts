@@ -116,6 +116,53 @@ const DECLARABLE_OPERATORS = [
   "kXor",
 ];
 
+const INLINE_NODES = new Set([
+  "label",
+
+  "identifier",
+
+  "literalString",
+  "literalStringMultiline",
+  "literalChar",
+  "literalNumber",
+
+  "exprBinary",
+  "exprUnary",
+  "exprIf",
+  "exprDot",
+  "exprParens",
+  "exprBrackets",
+  "exprSubscript",
+  "exprCall",
+  "exprTpl",
+  "exprArgs",
+  "legacyFormat",
+
+  "type",
+  "typeref",
+  "typerefDot",
+  "typerefTpl",
+  "typerefArgs",
+  "typerefPtr",
+
+  "genericDot",
+  "genericTpl",
+  "genericArgs",
+  "genericArg",
+
+  "defaultValue",
+  "range",
+  "caseLabel",
+
+  "declArg",
+  "declArgs",
+  "declPropArgs",
+
+  "arrInitializer",
+  "recInitializer",
+  "recInitializerField",
+]);
+
 let parserInstance: Parser | null = null;
 const printerState = new Map<number, PrinterState>();
 
@@ -1539,7 +1586,7 @@ export function printNode(
     retDoc = node.text;
   else if (["kGt", "kLt"].includes(node.type)) {
     if (["exprBinary", "operatorName"].includes(node.parent?.type ?? "")) {
-      retDoc = [line, node.text, line]; // kGt and kLt as operator
+      retDoc = [" ", node.text, " "]; // kGt and kLt as operator
     } else {
       retDoc = node.text; // kGt and kLt as language token
     }
@@ -1982,10 +2029,9 @@ export function printNode(
   }
 
   const nodePrevSibling = node.previousSibling;
-  const nodeMaybeSpacedFromSibling = node.type !== "label";
   if (
     nodePrevSibling &&
-    nodeMaybeSpacedFromSibling &&
+    !INLINE_NODES.has(node.type) &&
     node.startPosition.row - nodePrevSibling.endPosition.row > 1
   ) {
     retDoc = [hardline, retDoc];
