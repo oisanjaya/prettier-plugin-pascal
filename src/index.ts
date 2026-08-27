@@ -958,14 +958,11 @@ function printTry(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const node = path.getNode();
   if (!node) return "";
 
-  let targetHandlerField = "except";
-  for (let i = 0; i < node.childCount; i++) {
-    if (node.fieldNameForChild(i) === "finally") {
-      targetHandlerField = "finally";
-      break;
-    }
-  }
-
+  const finallyChildren = node.childrenForFieldName("finally");
+  
+  const targetHandlerField =
+    finallyChildren.length > 0 ? "finally" : "except";
+  
   const targetTypes: GroupMarker[] = [
     {
       type: "field",
