@@ -1350,21 +1350,22 @@ function printDeclProp(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     const nodeDoc = pathCall(path, printFn, i);
     if (!isNonEmptyDoc(nodeDoc)) continue;
 
-    if (node.fieldNameForChild(i) === "name") {
+    const childFieldName = node.fieldNameForChild(i);
+    if (childFieldName === "name") {
       nameGroup.push(nodeDoc);
       pushPostGroup = true;
-    } else if (node.fieldNameForChild(i) === "args") {
+    } else if (childFieldName === "args") {
       argsGroup.push(nodeDoc);
       pushPostGroup = true;
     } else if (
       node.child(i)?.type === ":" ||
-      node.fieldNameForChild(i) === "type"
+      childFieldName === "type"
     ) {
       typeGroup.push(nodeDoc);
       pushPostGroup = true;
     } else if (
       node.child(i)?.type === "kIndex" ||
-      node.fieldNameForChild(i) === "index"
+      childFieldName === "index"
     ) {
       indexGroup.push(nodeDoc);
       pushPostGroup = true;
