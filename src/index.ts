@@ -163,6 +163,11 @@ const NON_STANDALONE_NODES = new Set([
   "recInitializerField",
 ]);
 
+const NO_TRAILING_LINE_BEFORE_BREAK = new Set([
+  "exceptionHandler",
+  "declVariant",
+]);
+
 let parserInstance: Parser | null = null;
 const printerState = new Map<number, PrinterState>();
 
@@ -307,7 +312,7 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
       nodeDoc = group([
         nodeDoc,
         childNextSibling?.text ?? "",
-        ["exceptionHandler", "declVariant"].includes(node?.type)
+        NO_TRAILING_LINE_BEFORE_BREAK.has(node?.type)
           ? ""
           : ifBreak("", line),
       ]);
