@@ -168,6 +168,17 @@ const NO_TRAILING_LINE_BEFORE_BREAK = new Set([
   "declVariant",
 ]);
 
+const TOP_LEVEL_DEFINITION_PARENTS = new Set([
+  "interface",
+  "implementation",
+  "initialization",
+  "finalization",
+  "program",
+  "library",
+  "unit",
+  "root",
+]);
+
 let parserInstance: Parser | null = null;
 const printerState = new Map<number, PrinterState>();
 
@@ -1501,16 +1512,7 @@ function printDefProc(
     { shouldBreak: true },
   );
 
-  const finalDoc: Doc = [
-    "interface",
-    "implementation",
-    "initialization",
-    "finalization",
-    "program",
-    "library",
-    "unit",
-    "root",
-  ].includes(node.parent?.type ?? "")
+  const finalDoc: Doc = TOP_LEVEL_DEFINITION_PARENTS.has(node.parent?.type ?? "")
     ? group(finalGroup)
     : indent([" ".repeat((options as any)["tabWidth"]), finalGroup]);
 
