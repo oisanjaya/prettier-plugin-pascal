@@ -18,6 +18,7 @@ const {
   softline,
   indent,
   dedent,
+  trim,
   ifBreak,
   dedentToRoot,
   lineSuffix,
@@ -1918,7 +1919,7 @@ export function printNode(
 
         if (retDoc.length > 0)
           if (node.type === "label") {
-            retDoc = dedentToRoot(group([line, retDoc], { shouldBreak: true }));
+            retDoc = group([trim, retDoc], { shouldBreak: true });
           } else {
             retDoc = group(retDoc);
           }
