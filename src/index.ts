@@ -971,10 +971,9 @@ function printTry(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   if (!node) return "";
 
   const finallyChildren = node.childrenForFieldName("finally");
-  
-  const targetHandlerField =
-    finallyChildren.length > 0 ? "finally" : "except";
-  
+
+  const targetHandlerField = finallyChildren.length > 0 ? "finally" : "except";
+
   const targetTypes: GroupMarker[] = [
     {
       type: "field",
@@ -1366,16 +1365,10 @@ function printDeclProp(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     } else if (childFieldName === "args") {
       argsGroup.push(nodeDoc);
       pushPostGroup = true;
-    } else if (
-      node.child(i)?.type === ":" ||
-      childFieldName === "type"
-    ) {
+    } else if (node.child(i)?.type === ":" || childFieldName === "type") {
       typeGroup.push(nodeDoc);
       pushPostGroup = true;
-    } else if (
-      node.child(i)?.type === "kIndex" ||
-      childFieldName === "index"
-    ) {
+    } else if (node.child(i)?.type === "kIndex" || childFieldName === "index") {
       indexGroup.push(nodeDoc);
       pushPostGroup = true;
     } else {
@@ -1513,7 +1506,9 @@ function printDefProc(
     { shouldBreak: true },
   );
 
-  const finalDoc: Doc = TOP_LEVEL_DEFINITION_PARENTS.has(node.parent?.type ?? "")
+  const finalDoc: Doc = TOP_LEVEL_DEFINITION_PARENTS.has(
+    node.parent?.type ?? "",
+  )
     ? group(finalGroup)
     : indent([" ".repeat((options as any)["tabWidth"]), finalGroup]);
 
