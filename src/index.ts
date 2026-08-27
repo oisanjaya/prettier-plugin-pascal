@@ -17,10 +17,9 @@ const {
   hardline,
   softline,
   indent,
-  dedent,
+  fill,
   trim,
   ifBreak,
-  dedentToRoot,
   lineSuffix,
 } = prettier.doc.builders;
 
@@ -488,14 +487,9 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
         preGroup.length > 0 ? line : "",
         group(headerGroup),
       ]),
-      indent([
-        ["declClass", "declHelper", "declIntf"].includes(
-          node.child((groupingIndexes[3] ?? [])[0])?.type ?? "",
-        )
-          ? ""
-          : softline,
+      group(indent([
         join(line, postGroup),
-      ]),
+      ])),
     ]);
   } else {
     return "";
@@ -1914,9 +1908,9 @@ export function printNode(
 
         if (retDoc.length > 0)
           if (node.type === "label") {
-            retDoc = group([trim, retDoc], { shouldBreak: true });
+            retDoc = fill([trim, retDoc]);
           } else {
-            retDoc = group(retDoc);
+            retDoc = fill(retDoc);
           }
 
         break;
@@ -1941,11 +1935,7 @@ export function printNode(
             node.previousSibling?.endPosition.row !== node.startPosition.row &&
             node.nextSibling?.startPosition.row !== node.endPosition.row
           )
-            retDoc = [
-              trim,
-              " ".repeat(node.startPosition.column),
-              node.text,
-            ];
+            retDoc = [trim, " ".repeat(node.startPosition.column), node.text];
           else retDoc = node.text;
         }
         break;
