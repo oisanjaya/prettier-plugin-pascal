@@ -1293,6 +1293,66 @@ function printDeclProcRef(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   }
 }
 
+function printDeclProp(path: AstPath<TSNode>, printFn: PrintFn): Doc {
+  const node = path.getNode();
+  if (!node) return "";
+
+  const preGroup: Doc = [];
+  const nameGroup: Doc = [];
+  const argsGroup: Doc = [];
+  const typeGroup: Doc = [];
+  const indexGroup: Doc = [];
+  const postGroup: Doc = [];
+
+  let pushPostGroup = false;
+  for (let i = 0; i < node.childCount; i++) {
+    const nodeItem = pathCall(path, printFn, i);
+    if (!nodeIsNotEmpty(nodeItem)) continue;
+
+    if (node.fieldNameForChild(i) === "name") {
+      nameGroup.push(nodeItem);
+      pushPostGroup = true;
+    } else if (node.fieldNameForChild(i) === "args") {
+      argsGroup.push(nodeItem);
+      pushPostGroup = true;
+    } else if (
+      node.child(i)?.type === ":" ||
+      node.fieldNameForChild(i) === "type"
+    ) {
+      typeGroup.push(nodeItem);
+      pushPostGroup = true;
+    } else if (
+      node.child(i)?.type === "kIndex" ||
+      node.fieldNameForChild(i) === "index"
+    ) {
+      indexGroup.push(nodeItem);
+      pushPostGroup = true;
+    } else {
+      if (pushPostGroup) postGroup.push(nodeItem);
+      else preGroup.push(nodeItem);
+    }
+  }
+
+  if (preGroup.length > 0 || nameGroup.length > 0) {
+    return group([
+      group([
+        join(line, preGroup),
+        line,
+        join(softline, nameGroup),
+        argsGroup.length > 0 ? softline : "",
+        join(softline, argsGroup),
+        softline,
+        join(softline, typeGroup),
+      ]),
+      indent(
+        group([postGroup.length > 0 ? line : "", group(join(line, postGroup))]),
+      ),
+    ]);
+  } else {
+    return "";
+  }
+}
+
 function printExpression(
   path: AstPath<TSNode>,
   printFn: PrintFn,
@@ -1707,8 +1767,11 @@ export function printNode(
         retDoc = printDeclProcRef(path, printFn);
         break;
       }
+      case "declProp": {
+        retDoc = printDeclProp(path, printFn);
+        break;
+      }
       case "genericArg":
-      case "declProp":
       case "declField":
       case "declType":
       case "declVar":
