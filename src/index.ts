@@ -1936,7 +1936,18 @@ export function printNode(
           node.previousSibling?.endPosition.row === node.startPosition.row
         )
           retDoc = "";
-        else retDoc = node.text;
+        else {
+          if (
+            node.previousSibling?.endPosition.row !== node.startPosition.row &&
+            node.nextSibling?.startPosition.row !== node.endPosition.row
+          )
+            retDoc = [
+              trim,
+              " ".repeat(node.startPosition.column),
+              node.text,
+            ];
+          else retDoc = node.text;
+        }
         break;
       }
       case "defaultValue": {
