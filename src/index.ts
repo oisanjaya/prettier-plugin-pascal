@@ -275,8 +275,8 @@ function getNextNodeInTraversal(
   return nodeNextSibling;
 }
 
-function nodeIsNotEmpty(nodeItem: any): boolean {
-  return nodeItem !== "" && !(Array.isArray(nodeItem) && nodeItem.length === 0);
+function isNonEmptyDoc(nodeDoc: Doc): boolean {
+  return nodeDoc !== "" && !(Array.isArray(nodeDoc) && nodeDoc.length === 0);
 }
 
 function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
@@ -386,16 +386,16 @@ function printModule(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const groupingIndexes = buildGrouping(node, targetTypes);
 
   groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      headerGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      headerGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[1].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      contentsGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      contentsGroup.push(nodeDoc);
     }
   });
 
@@ -442,16 +442,16 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const postGroup: Doc = [];
 
   (groupingIndexes[0] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      preGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      preGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[1].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      nameGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      nameGroup.push(nodeDoc);
     }
   });
 
@@ -463,9 +463,9 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   ];
 
   (groupingIndexes[3] ?? []).forEach((i) => {
-    const nodeItem: Doc = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      postGroup.push(nodeItem);
+    const nodeDoc: Doc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      postGroup.push(nodeDoc);
     }
   });
 
@@ -534,38 +534,38 @@ function printCagedItems(
   const closeCageGroup: Doc = [];
 
   groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      preGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      preGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[1].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      openCageGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      openCageGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[2].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      itemsGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      itemsGroup.push(nodeDoc);
     }
   });
 
   if (closingCage !== undefined) {
     (groupingIndexes[3] ?? []).forEach((i) => {
-      const nodeItem = pathCall(path, printFn, i);
-      if (nodeIsNotEmpty(nodeItem)) {
-        closeCageGroup.push(nodeItem);
+      const nodeDoc = pathCall(path, printFn, i);
+      if (isNonEmptyDoc(nodeDoc)) {
+        closeCageGroup.push(nodeDoc);
       }
     });
 
     (groupingIndexes[4] ?? []).forEach((i) => {
-      const nodeItem = pathCall(path, printFn, i);
-      if (nodeIsNotEmpty(nodeItem)) {
-        postGroup.push(nodeItem);
+      const nodeDoc = pathCall(path, printFn, i);
+      if (isNonEmptyDoc(nodeDoc)) {
+        postGroup.push(nodeDoc);
       }
     });
   }
@@ -615,16 +615,16 @@ function printHangingList(
   const itemsGroup: Doc = [];
 
   groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      headerGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      headerGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[1].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      itemsGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      itemsGroup.push(nodeDoc);
     }
   });
 
@@ -689,23 +689,23 @@ function printDeclArray(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const postGroup: Doc = [];
 
   groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      preGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      preGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[1].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      rangeGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      rangeGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[2].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    postGroup.push(nodeItem);
-    if (nodeIsNotEmpty(nodeItem)) {
+    const nodeDoc = pathCall(path, printFn, i);
+    postGroup.push(nodeDoc);
+    if (isNonEmptyDoc(nodeDoc)) {
     }
   });
 
@@ -741,16 +741,16 @@ function printDefaultValue(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const valueGroup: Doc = [];
 
   groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      eqGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      eqGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[1].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      valueGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      valueGroup.push(nodeDoc);
     }
   });
 
@@ -795,8 +795,8 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
           groupingIndex++;
           i--;
         } else {
-          const nodeItem = pathCall(path, printFn, i);
-          if (nodeIsNotEmpty(nodeItem)) groups[groupingIndex].push(nodeItem);
+          const nodeDoc = pathCall(path, printFn, i);
+          if (isNonEmptyDoc(nodeDoc)) groups[groupingIndex].push(nodeDoc);
         }
         break;
       }
@@ -807,8 +807,8 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
           groupingIndex++;
           i--;
         } else {
-          const nodeItem = pathCall(path, printFn, i);
-          if (nodeIsNotEmpty(nodeItem)) groups[groupingIndex].push(nodeItem);
+          const nodeDoc = pathCall(path, printFn, i);
+          if (isNonEmptyDoc(nodeDoc)) groups[groupingIndex].push(nodeDoc);
         }
         break;
       }
@@ -817,8 +817,8 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
           groupingIndex++;
           i--;
         } else {
-          const nodeItem = pathCall(path, printFn, i);
-          if (nodeIsNotEmpty(nodeItem)) groups[groupingIndex].push(nodeItem);
+          const nodeDoc = pathCall(path, printFn, i);
+          if (isNonEmptyDoc(nodeDoc)) groups[groupingIndex].push(nodeDoc);
         }
         break;
       }
@@ -827,14 +827,14 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
           groupingIndex++;
           i--;
         } else {
-          const nodeItem = pathCall(path, printFn, i);
-          if (nodeIsNotEmpty(nodeItem)) groups[groupingIndex].push(nodeItem);
+          const nodeDoc = pathCall(path, printFn, i);
+          if (isNonEmptyDoc(nodeDoc)) groups[groupingIndex].push(nodeDoc);
         }
         break;
       }
       default: {
-        const nodeItem = pathCall(path, printFn, i);
-        if (nodeIsNotEmpty(nodeItem)) groups[groupingIndex].push(nodeItem);
+        const nodeDoc = pathCall(path, printFn, i);
+        if (isNonEmptyDoc(nodeDoc)) groups[groupingIndex].push(nodeDoc);
         break;
       }
     }
@@ -904,30 +904,30 @@ function printIfElse(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const postGroup: Doc = [];
 
   groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      ifGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      ifGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[2].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      thenGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      thenGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[4] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      elseGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      elseGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[5] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      postGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      postGroup.push(nodeDoc);
     }
   });
 
@@ -989,23 +989,23 @@ function printTry(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const postGroup: Doc = [];
 
   groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      tryGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      tryGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[1].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      handlerGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      handlerGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[2] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      postGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      postGroup.push(nodeDoc);
     }
   });
 
@@ -1040,16 +1040,16 @@ function printDoBlock(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const postGroup: Doc = [];
 
   groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      whileGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      whileGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[1] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      postGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      postGroup.push(nodeDoc);
     }
   });
 
@@ -1081,16 +1081,16 @@ function printCaseCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const postGroup: Doc = [];
 
   (groupingIndexes[0] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      preGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      preGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[1] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      postGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      postGroup.push(nodeDoc);
     }
   });
 
@@ -1122,23 +1122,23 @@ function printDeclVariantClause(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const postGroup: Doc = [];
 
   (groupingIndexes[0] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      preGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      preGroup.push(nodeDoc);
     }
   });
 
   let firstItem = true;
   (groupingIndexes[1] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
       if (
         !firstItem &&
         ![")", "declField", "declVariant"].includes(node.child(i)?.type ?? "")
       )
         postGroup.push(line);
       firstItem = false;
-      postGroup.push(nodeItem);
+      postGroup.push(nodeDoc);
     }
   });
 
@@ -1184,16 +1184,16 @@ function printCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const closingGroup: Doc = [];
 
   groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      headerGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      headerGroup.push(nodeDoc);
     }
   });
 
   groupingIndexes[1].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      ofGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      ofGroup.push(nodeDoc);
     }
   });
 
@@ -1208,24 +1208,24 @@ function printCase(path: AstPath<TSNode>, printFn: PrintFn): Doc {
         ]),
       );
     } else {
-      const nodeItem = pathCall(path, printFn, i);
-      if (nodeIsNotEmpty(nodeItem)) {
-        itemsGroup.push(nodeItem);
+      const nodeDoc = pathCall(path, printFn, i);
+      if (isNonEmptyDoc(nodeDoc)) {
+        itemsGroup.push(nodeDoc);
       }
     }
   });
 
   (groupingIndexes[3] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      closingGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      closingGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[4] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      closingGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      closingGroup.push(nodeDoc);
     }
   });
 
@@ -1273,30 +1273,30 @@ function printDeclProc(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const postGroup: Doc = [];
 
   (groupingIndexes[0] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      preGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      preGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[1] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      nameGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      nameGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[2] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      declArgs.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      declArgs.push(nodeDoc);
     }
   });
 
   (groupingIndexes[3] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      postGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      postGroup.push(nodeDoc);
     }
   });
 
@@ -1319,9 +1319,9 @@ function printDeclProcRef(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   const retDoc: Doc = [];
 
   for (let i = 0; i < node.childCount; i++) {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      retDoc.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      retDoc.push(nodeDoc);
       if (!["kProcedure", "kFunction"].includes(node.child(i)?.type ?? ""))
         retDoc.push(line);
     }
@@ -1347,30 +1347,30 @@ function printDeclProp(path: AstPath<TSNode>, printFn: PrintFn): Doc {
 
   let pushPostGroup = false;
   for (let i = 0; i < node.childCount; i++) {
-    const nodeItem = pathCall(path, printFn, i);
-    if (!nodeIsNotEmpty(nodeItem)) continue;
+    const nodeDoc = pathCall(path, printFn, i);
+    if (!isNonEmptyDoc(nodeDoc)) continue;
 
     if (node.fieldNameForChild(i) === "name") {
-      nameGroup.push(nodeItem);
+      nameGroup.push(nodeDoc);
       pushPostGroup = true;
     } else if (node.fieldNameForChild(i) === "args") {
-      argsGroup.push(nodeItem);
+      argsGroup.push(nodeDoc);
       pushPostGroup = true;
     } else if (
       node.child(i)?.type === ":" ||
       node.fieldNameForChild(i) === "type"
     ) {
-      typeGroup.push(nodeItem);
+      typeGroup.push(nodeDoc);
       pushPostGroup = true;
     } else if (
       node.child(i)?.type === "kIndex" ||
       node.fieldNameForChild(i) === "index"
     ) {
-      indexGroup.push(nodeItem);
+      indexGroup.push(nodeDoc);
       pushPostGroup = true;
     } else {
-      if (pushPostGroup) postGroup.push(nodeItem);
-      else preGroup.push(nodeItem);
+      if (pushPostGroup) postGroup.push(nodeDoc);
+      else preGroup.push(nodeDoc);
     }
   }
 
@@ -1414,16 +1414,16 @@ function printExpression(
   const groupingIndexes = buildGrouping(node, targetTypes);
 
   groupingIndexes[0].forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      leftGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      leftGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[2] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      rightGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      rightGroup.push(nodeDoc);
     }
   });
 
@@ -1472,23 +1472,23 @@ function printDefProc(
   const groupingIndexes = buildGrouping(node, cageBoundaries);
 
   (groupingIndexes[0] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      headerGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      headerGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[1] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      localGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      localGroup.push(nodeDoc);
     }
   });
 
   (groupingIndexes[2] ?? []).forEach((i) => {
-    const nodeItem = pathCall(path, printFn, i);
-    if (nodeIsNotEmpty(nodeItem)) {
-      postGroup.push(nodeItem);
+    const nodeDoc = pathCall(path, printFn, i);
+    if (isNonEmptyDoc(nodeDoc)) {
+      postGroup.push(nodeDoc);
     }
   });
 
@@ -1596,9 +1596,9 @@ export function printNode(
     switch (node.type) {
       case "root": {
         for (let i = 0; i < node.childCount; i++) {
-          const nodeItem = pathCall(path, printFn, i);
-          if (nodeIsNotEmpty(nodeItem)) {
-            retDoc.push(nodeItem);
+          const nodeDoc = pathCall(path, printFn, i);
+          if (isNonEmptyDoc(nodeDoc)) {
+            retDoc.push(nodeDoc);
           }
         }
 
@@ -1625,8 +1625,8 @@ export function printNode(
       case "initialization":
       case "finalization": {
         for (let i = 0; i < node.childCount; i++) {
-          const nodeItem = pathCall(path, printFn, i);
-          if (nodeIsNotEmpty(nodeItem)) retDoc.push(nodeItem);
+          const nodeDoc = pathCall(path, printFn, i);
+          if (isNonEmptyDoc(nodeDoc)) retDoc.push(nodeDoc);
         }
         retDoc = join(hardline, retDoc);
         break;
@@ -1712,13 +1712,13 @@ export function printNode(
       case "exprArgs": {
         let firstItem = true;
         for (let i = 0; i < node.childCount; i++) {
-          const nodeItem = pathCall(path, printFn, i);
-          if (nodeIsNotEmpty(nodeItem)) {
+          const nodeDoc = pathCall(path, printFn, i);
+          if (isNonEmptyDoc(nodeDoc)) {
             if (!firstItem) {
               retDoc.push(softline);
             }
             firstItem = false;
-            retDoc.push(nodeItem);
+            retDoc.push(nodeDoc);
           }
         }
 
@@ -1829,13 +1829,13 @@ export function printNode(
         } else {
           let firstItem = true;
           for (let i = 0; i < node.childCount; i++) {
-            const nodeItem = pathCall(path, printFn, i);
-            if (nodeIsNotEmpty(nodeItem)) {
+            const nodeDoc = pathCall(path, printFn, i);
+            if (isNonEmptyDoc(nodeDoc)) {
               if (!firstItem) {
                 retDoc.push(line);
               }
               firstItem = false;
-              retDoc.push(nodeItem);
+              retDoc.push(nodeDoc);
             }
           }
           retDoc = group(retDoc);
@@ -1848,9 +1848,9 @@ export function printNode(
       }
       case "typerefArgs": {
         for (let i = 0; i < node.childCount; i++) {
-          const nodeItem = pathCall(path, printFn, i);
-          if (nodeIsNotEmpty(nodeItem)) {
-            retDoc.push(nodeItem);
+          const nodeDoc = pathCall(path, printFn, i);
+          if (isNonEmptyDoc(nodeDoc)) {
+            retDoc.push(nodeDoc);
           }
         }
         break;
@@ -1905,13 +1905,13 @@ export function printNode(
       case "goto": {
         let firstItem = true;
         for (let i = 0; i < node.childCount; i++) {
-          const nodeItem = pathCall(path, printFn, i);
-          if (nodeIsNotEmpty(nodeItem)) {
+          const nodeDoc = pathCall(path, printFn, i);
+          if (isNonEmptyDoc(nodeDoc)) {
             if (!firstItem) {
               retDoc.push(line);
             }
             firstItem = false;
-            retDoc.push(nodeItem);
+            retDoc.push(nodeDoc);
           }
         }
 
@@ -1990,13 +1990,13 @@ export function printNode(
       case "range": {
         let firstItem = true;
         for (let i = 0; i < node.childCount; i++) {
-          const nodeItem = pathCall(path, printFn, i);
-          if (nodeIsNotEmpty(nodeItem)) {
+          const nodeDoc = pathCall(path, printFn, i);
+          if (isNonEmptyDoc(nodeDoc)) {
             if (!firstItem) {
               retDoc.push(softline);
             }
             firstItem = false;
-            retDoc.push(nodeItem);
+            retDoc.push(nodeDoc);
           }
         }
 
