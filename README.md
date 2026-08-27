@@ -6,7 +6,7 @@
 
 Prettier is an opinionated code formatter. It parses your code and reprints it using consistent formatting rules while taking the configured maximum line length into account.
 
-This plugin adds support for the Pascal language to Prettier.
+This plugin adds support for the Pascal language to Prettier. I believe that Pascal code deserves the same love and consistency as any modern language.
 
 It uses [tree-sitter-pascal](https://github.com/jimmckeeth/tree-sitter-pascal) to parse Pascal source code and generates Prettier's document structure from the resulting syntax tree.
 
