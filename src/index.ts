@@ -487,9 +487,7 @@ function printNameWithType(path: AstPath<TSNode>, printFn: PrintFn): Doc {
         preGroup.length > 0 ? line : "",
         group(headerGroup),
       ]),
-      group(indent([
-        join(line, postGroup),
-      ])),
+      group(indent([join(line, postGroup)])),
     ]);
   } else {
     return "";
@@ -606,6 +604,7 @@ function printHangingList(
   path: AstPath<TSNode>,
   printFn: PrintFn,
   headerMarkers: string[],
+  useFill = false,
 ): Doc {
   const node = path.getNode();
   if (!node) return "";
@@ -638,7 +637,12 @@ function printHangingList(
     return group(
       [
         group([join(line, headerGroup)]),
-        indent([softline, group(join(softline, itemsGroup))]),
+        indent([
+          softline,
+          useFill
+            ? fill(join(softline, itemsGroup))
+            : group(join(softline, itemsGroup)),
+        ]),
       ],
       {
         shouldBreak: true,
@@ -1741,7 +1745,7 @@ export function printNode(
         break;
       }
       case "declUses": {
-        retDoc = printHangingList(path, printFn, ["kUses"]);
+        retDoc = printHangingList(path, printFn, ["kUses"], true);
         break;
       }
       case "declLabels": {
