@@ -261,15 +261,15 @@ function getNextNodeInTraversal(
 ): TSNode | null {
   if (!node) return null;
 
-  let nodeNextSibling = node?.nextSibling;
+  let nodeNextSibling = node.nextSibling;
   let parentNode: TSNode | null | undefined = node;
   while (
     (nodeNextSibling === undefined || nodeNextSibling === null) &&
     parentNode !== undefined &&
     parentNode !== null
   ) {
-    nodeNextSibling = parentNode?.nextSibling;
-    parentNode = parentNode?.parent;
+    nodeNextSibling = parentNode.nextSibling;
+    parentNode = parentNode.parent;
   }
 
   return nodeNextSibling;
@@ -297,39 +297,28 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
   }
 
   while (
-    !slurpedNodes.has(childNextSibling?.id ?? -1) &&
-    (SEPARATORS.has(childNextSibling?.type ?? "") ||
-      (childNextSibling?.type === "kEndDot" && child?.type === "kEnd") ||
-      (childNextSibling?.type === "comment" &&
-        childNextSibling.startPosition.row === child?.startPosition.row))
+    child &&
+    childNextSibling &&
+    !slurpedNodes.has(childNextSibling.id) &&
+    (SEPARATORS.has(childNextSibling.type) ||
+      (childNextSibling.type === "kEndDot" && child.type === "kEnd") ||
+      (childNextSibling.type === "comment" &&
+        childNextSibling.startPosition.row === child.startPosition.row))
   ) {
-    if (
-      (SEPARATORS.has(childNextSibling?.type ?? "") &&
-        !slurpedNodes.has(childNextSibling?.id ?? -1)) ||
-      (childNextSibling?.type === "kEndDot" && child?.type === "kEnd")
-    ) {
-      slurpedNodes.add(childNextSibling?.id ?? -100);
+    if (childNextSibling.type === "comment") {
+      slurpedNodes.add(childNextSibling.id ?? -100);
+      if (childNextSibling.text.startsWith("//")) {
+        nodeDoc = group([nodeDoc, line, lineSuffix(childNextSibling.text)]);
+      } else {
+        nodeDoc = group([nodeDoc, line, childNextSibling.text ?? "", line]);
+      }
+    } else {
+      slurpedNodes.add(childNextSibling.id ?? -100);
       nodeDoc = group([
         nodeDoc,
-        childNextSibling?.text ?? "",
-        NO_TRAILING_LINE_BEFORE_BREAK.has(node?.type)
-          ? ""
-          : ifBreak("", line),
+        childNextSibling.text,
+        NO_TRAILING_LINE_BEFORE_BREAK.has(node?.type) ? "" : ifBreak("", line),
       ]);
-    } else if (
-      childNextSibling?.type === "comment" &&
-      childNextSibling.startPosition.row === child?.startPosition.row
-    ) {
-      slurpedNodes.add(childNextSibling?.id ?? -100);
-      if (childNextSibling.text.startsWith("//")) {
-        nodeDoc = group([
-          nodeDoc,
-          line,
-          lineSuffix(childNextSibling?.text ?? ""),
-        ]);
-      } else {
-        nodeDoc = group([nodeDoc, line, childNextSibling?.text ?? "", line]);
-      }
     }
 
     childNextSibling = getNextNodeInTraversal(childNextSibling);
@@ -1583,10 +1572,7 @@ export function printNode(
   )
     // case where dot used in generics
     retDoc = node.text;
-  else if (
-    UNARY_OPERATORS.has(node.type) &&
-    node.parent?.type === "exprUnary"
-  )
+  else if (UNARY_OPERATORS.has(node.type) && node.parent?.type === "exprUnary")
     // for exprUnary don't add space around operator
     retDoc = node.text;
   else if (["kGt", "kLt"].includes(node.type)) {
@@ -1658,7 +1644,11 @@ export function printNode(
         break;
       }
       case "assignment": {
-        retDoc = printExpression(path, printFn, Array.from(ASSIGNMENT_OPERATORS));
+        retDoc = printExpression(
+          path,
+          printFn,
+          Array.from(ASSIGNMENT_OPERATORS),
+        );
         break;
       }
       case "exprTpl": {
