@@ -260,7 +260,9 @@ function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
       nodeDoc = group([
         nodeDoc,
         childNextSibling?.text ?? "",
-        ["exceptionHandler", "declVariant"].includes(node?.type) ? "" : line,
+        ["exceptionHandler", "declVariant"].includes(node?.type)
+          ? ""
+          : ifBreak("", line),
       ]);
     } else if (
       childNextSibling?.type === "comment" &&
@@ -1547,6 +1549,10 @@ export function printNode(
         retDoc = printExpression(path, printFn, ASSIGNMENT_OPERATORS);
         break;
       }
+      case "exprTpl": {
+        retDoc = printCagedItems(path, printFn, false, ["kLt"], ["kGt"]);
+        break;
+      }
       case "for":
       case "foreach":
       case "with":
@@ -1757,6 +1763,7 @@ export function printNode(
           ["kEnd"],
           softline,
           line,
+          "",
         );
         break;
       }
@@ -1840,7 +1847,6 @@ export function printNode(
       case "declLabel":
       case "declString":
       case "exprSubscript":
-      case "exprTpl":
       case "genericDot":
       case "genericTpl":
       case "genericArgs":
@@ -1852,10 +1858,8 @@ export function printNode(
       case "statements":
       case "statementsTr":
       case "type":
-      case "typerefArgs":
       case "typerefDot":
-      case "typerefPtr":
-      case "typerefTpl": {
+      case "typerefPtr": {
         let firstItem = true;
         const retArr = [];
         for (let i = 0; i < node.childCount; i++) {
