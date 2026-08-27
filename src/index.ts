@@ -1554,6 +1554,7 @@ export function printNode(
       if (node.child(i)?.type === "rttiAttributes") {
         rttiAttributesInNode.push(i);
         slurpedNodes.add(node.child(i)?.id ?? -100);
+      } else {
         break;
       }
     }
