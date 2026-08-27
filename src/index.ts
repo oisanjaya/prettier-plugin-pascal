@@ -1880,7 +1880,9 @@ export function printNode(
         break;
       }
       case "pp": {
-        retDoc = node.text;
+        if (["declClass"].includes(node.parent?.type ?? ""))
+          retDoc = [hardline, trim, node.text, hardline];
+        else retDoc = [trim, node.text];
         break;
       }
       case "asmBody":
