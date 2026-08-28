@@ -32,4 +32,4 @@ jobs:
           echo "=== package contents ==="
           npm pack --dry-run
       - run: npm pack --dry-run
-#      - run: npm stage publish
+      - run: npm stage publish
