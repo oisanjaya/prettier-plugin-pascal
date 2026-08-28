@@ -46,9 +46,5 @@
   "dependencies": {
     "tsx": "^4.23.12",
     "web-tree-sitter": "0.26.11"
-  },
-  "allowScripts": {
-    "esbuild@0.27.7": true,
-    "esbuild@0.28.2": true
   }
 }
