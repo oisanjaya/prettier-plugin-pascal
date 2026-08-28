@@ -2,6 +2,7 @@
   "name": "prettier-plugin-pascal",
   "version": "0.1.6",
   "description": "A modern, opinionated Prettier plugin that automatically formats Pascal code—including Delphi, Object Pascal, Free Pascal, and Lazarus—with fast, consistent, and reliable styling for a seamless development experience.",
+  "repository": "https://github.com/oisanjaya/prettier-plugin-pascal.git",
   "main": "dist/index.js",
   "module": "dist/index.js",
   "types": "dist/index.d.ts",
