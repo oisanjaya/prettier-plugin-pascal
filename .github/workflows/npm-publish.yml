@@ -33,5 +33,9 @@ jobs:
           node-version: 24
           registry-url: https://registry.npmjs.org/
           package-manager-cache: false  # never use caching in release builds
+      - run: echo "Package repository:"
+      - run: npm pkg get repository
+      - run: echo "Package name:"
+      - run: npm pkg get name
       - run: npm ci
       - run: npm publish
