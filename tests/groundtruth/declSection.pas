@@ -1,5 +1,5 @@
 type
   TClass = class
-      public
-        X: Integer;
+    public
+      X: Integer;
     end;
