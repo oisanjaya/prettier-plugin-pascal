@@ -853,15 +853,14 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
   if (groups[0].length > 0) {
     return group([
       group(
-        indent([
+        [
           group(groups[0]),
-          groups[1].length > 0 ? line : "",
-          join(line, groups[1]),
+          groups[1].length > 0 ? indent([line, join(line, groups[1])]) : "",
           groups[2].length > 0 ? line : "",
           join(line, groups[2]),
           groups[3].length > 0 ? line : "",
           join(line, groups[3]),
-        ]),
+        ],
         { shouldBreak: true },
       ),
       groups[4].length > 0 ? line : "",
@@ -1569,7 +1568,7 @@ export function printNode(
     retDoc = node.text;
   else if (UNARY_OPERATORS.has(node.type) && node.parent?.type === "exprUnary")
     // for exprUnary don't add space around operator
-    retDoc = node.text;
+    retDoc = [node.text, node.type === "kNot" ? line : ""];
   else if (["kGt", "kLt"].includes(node.type)) {
     if (["exprBinary", "operatorName"].includes(node.parent?.type ?? "")) {
       retDoc = [" ", node.text, " "]; // kGt and kLt as operator
