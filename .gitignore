@@ -1,4 +1,7 @@
 tests/lt*.*
+tests/future_fixtures/
 node_modules/
 dist/**
 *.bak
+.*
+!.gitignore

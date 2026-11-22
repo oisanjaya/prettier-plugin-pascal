@@ -9,10 +9,10 @@ import { dirname, resolve } from "node:path";
 //   "https://github.com/jimmckeeth/tree-sitter-pascal/releases/download/" +
 //   `${PASCAL_PARSER_VERSION}/tree-sitter-pascal.wasm`;
 const EXPECTED_SHA256 =
-  "6407e4f1ba0a19ed128987035d929ce891186bc0b53543731df65a7ac8ea4dd7";
+  "99e17cd81a9f0506b9c65624e4a8cfa8f894c318562cd21ed39c3f85bbf71188";
 const URL =
   "https://github.com/oisanjaya/tree-sitter-pascal/releases/download/" +
-  "v0.11.1-4c7ff14/tree-sitter-pascal.wasm";
+  "v0.11.2/tree-sitter-pascal.wasm";
 
 const output = resolve("dist/tree-sitter-pascal.wasm");
 
