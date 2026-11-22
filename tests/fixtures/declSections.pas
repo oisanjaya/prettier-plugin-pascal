@@ -1,0 +1,1 @@
+unit declSections; interface implementation var x: Integer; initialization x := 1; end.

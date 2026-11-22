@@ -1,0 +1,10 @@
+program DeclSection;
+{$mode objfpc}
+{$H+}
+type
+  TClass = class
+    public
+      X: Integer;
+    end;
+begin
+end.

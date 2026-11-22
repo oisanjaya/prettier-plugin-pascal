@@ -1,0 +1,33 @@
+program OperatorName;
+{$mode objfpc}
+{$H+}
+uses
+  SysUtils;
+type
+  TVector = record
+      X, Y: Double;
+    end;
+operator +(const a, b: TVector)c:  TVector;
+begin
+  c.X := a.X + b.X;
+  c.Y := a.Y + b.Y;
+end;
+operator =(const a, b: TVector)eq:  Boolean;
+begin
+  eq := (a.X = b.X) and (a.Y = b.Y);
+end;
+operator :=(const a: TVector)s:  string;
+begin
+  s := Format('(%.1f, %.1f)', [a.X, a.Y]);
+end;
+var
+  v1, v2, v3: TVector;
+begin
+  v1.X := 2.0;
+  v1.Y := 3.0;
+  v2.X := 4.0;
+  v2.Y := 1.0;
+  v3 := v1 + v2;
+  WriteLn('v3 = ', string(v3));
+  WriteLn('v1 = v2: ', v1 = v2);
+end.
