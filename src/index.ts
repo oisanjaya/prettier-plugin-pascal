@@ -8,6 +8,7 @@ import prettier, {
   SupportOption,
   AstPath,
   Doc,
+  doc,
 } from "prettier";
 
 const {
@@ -288,6 +289,23 @@ function getNextNodeInTraversal(
 
 function isNonEmptyDoc(nodeDoc: Doc): boolean {
   return nodeDoc !== "" && !(Array.isArray(nodeDoc) && nodeDoc.length === 0);
+}
+
+function joinExceptBrackets(sep: Doc, docs: Doc[]): Doc[] {
+  const BRACKETS = new Set(["(", ")", "[", "]", "{", "}"]);
+  const ret: Doc[] = [];
+  if (docs.length == 0) {
+    return ret;
+  }
+
+  ret.push(docs[0]);
+  for (let i = 1; i < docs.length; i++) {
+    if (!(BRACKETS.has(docs[i - 1].toString()) || BRACKETS.has(docs[i].toString()))) {
+      ret.push(sep);
+    }
+    ret.push(docs[i]);
+  }
+  return ret;
 }
 
 function pathCall(path: AstPath<TSNode>, printFn: PrintFn, idx: number): Doc {
@@ -854,7 +872,7 @@ function printDeclClass(path: AstPath<TSNode>, printFn: PrintFn): Doc {
     return group([
       group(
         [
-          group(groups[0]),
+          group(joinExceptBrackets(line, groups[0])),
           groups[1].length > 0 ? indent([line, join(line, groups[1])]) : "",
           groups[2].length > 0 ? line : "",
           join(line, groups[2]),
@@ -1736,7 +1754,7 @@ export function printNode(
         break;
       }
       case "declVars": {
-        retDoc = printCagedItems(path, printFn, true, ["kVar"]);
+        retDoc = printCagedItems(path, printFn, true, ["kVar"], [], line);
         break;
       }
       case "declTypes": {
@@ -1990,7 +2008,8 @@ export function printNode(
           });
         break;
       }
-      case "range": {
+      case "range":
+      case "declSubRange": {
         let firstItem = true;
         for (let i = 0; i < node.childCount; i++) {
           const nodeDoc = pathCall(path, printFn, i);
