@@ -1,4 +1,1 @@
-program LiteralNumberTest;
-begin
-  x := 42;
-end.
+program LiteralNumberTest; var x: Integer; begin x := 42; end.

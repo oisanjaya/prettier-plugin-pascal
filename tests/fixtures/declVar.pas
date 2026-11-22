@@ -1,2 +1,1 @@
-var
-  X: Integer;
+program DeclVar; var X: Integer; begin end.

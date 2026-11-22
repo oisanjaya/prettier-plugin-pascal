@@ -1,3 +1,1 @@
-library LibraryTest;
-begin
-end.
+library LibraryTest; begin end.

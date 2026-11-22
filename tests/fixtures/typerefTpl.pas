@@ -1,4 +1,1 @@
-program TyperefTplTest;
-var x: TList<Integer>;
-begin
-end.
+program TyperefTplTest; {$mode objfpc} type generic TList<T> = record Item: T; end; var x: specialize TList<Integer>; begin end.

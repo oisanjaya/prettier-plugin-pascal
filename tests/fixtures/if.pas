@@ -1,4 +1,1 @@
-program IfTest;
-begin
-  if x then y := 1;
-end.
+program IfTest; var x: Boolean; y: Integer; begin if x then y := 1; end.

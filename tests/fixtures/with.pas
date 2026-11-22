@@ -1,4 +1,1 @@
-program WithTest;
-begin
-  with Obj do Value := 1;
-end.
+program WithTest; type TObj = record Value: Integer; end; var Obj: TObj; begin with Obj do Value := 1; end.

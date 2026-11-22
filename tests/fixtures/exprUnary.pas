@@ -1,5 +1,1 @@
-program ExprUnaryTest;
-var x: Integer;
-begin
-  x := -value;
-end.
+program ExprUnaryTest; var value, x: Integer; begin x := -value; end.

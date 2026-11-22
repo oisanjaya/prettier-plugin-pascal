@@ -1,5 +1,1 @@
-program ExprBinaryTest;
-var x: Integer;
-begin
-  x := a + b * c;
-end.
+program ExprBinaryTest; var x, a, b, c: Integer; begin x := a + b * c; end.

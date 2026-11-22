@@ -1,2 +1,6 @@
+program declConst;
+{$mode objfpc}{$H+}
 const
-X = 42; X: Integer = 42;
+X = 42; Y: Integer = 42;
+begin
+end.

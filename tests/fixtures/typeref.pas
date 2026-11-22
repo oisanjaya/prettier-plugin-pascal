@@ -1,4 +1,1 @@
-program TyperefTest;
-var x: MyType;
-begin
-end.
+program TyperefTest; type MyType = Integer; var x: MyType; begin end.

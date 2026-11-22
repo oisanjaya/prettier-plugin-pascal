@@ -1,4 +1,1 @@
-program RepeatTest;
-begin
-  repeat x := x + 1; until x >= 10;
-end.
+program RepeatTest; var x: Integer; begin repeat x := x + 1; until x >= 10; end.

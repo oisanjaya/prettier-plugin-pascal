@@ -1,5 +1,13 @@
 program TyperefDotTest;
+{$mode objfpc}
+{$H+}
+type
+  TContainer = class
+    public
+      type
+        TStatus = (stReady, stBusy, stError);
+    end;
 var
-  x: System.Types.Integer;
+  CurrentStatus: TContainer.TStatus;
 begin
 end.

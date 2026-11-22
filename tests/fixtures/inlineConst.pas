@@ -1,4 +1,1 @@
-program InlineConstTest;
-begin
-  const x: Integer = 1;
-end.
+program InlineConstTest; {$J+} const x: Integer = 1; begin end.

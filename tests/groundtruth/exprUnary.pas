@@ -1,6 +1,6 @@
 program ExprUnaryTest;
 var
-  x: Integer;
+  value, x: Integer;
 begin
   x := -value;
 end.

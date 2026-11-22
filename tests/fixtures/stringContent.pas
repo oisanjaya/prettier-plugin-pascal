@@ -1,4 +1,1 @@
-program StringContentTest;
-begin
-  x := '''hello world''';
-end.
+program StringContentTest; var x: string; begin x := '''hello world'''; end.

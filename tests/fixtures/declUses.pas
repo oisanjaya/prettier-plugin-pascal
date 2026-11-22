@@ -1,1 +1,1 @@
-uses SysUtils;
+program DeclUses; uses SysUtils; begin end.

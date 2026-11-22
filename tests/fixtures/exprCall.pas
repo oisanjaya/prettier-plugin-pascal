@@ -1,4 +1,1 @@
-program ExprCallTest;
-begin
-  Foo(1);
-end.
+program ExprCallTest; procedure Foo(A: Integer); begin end; begin Foo(1); end.

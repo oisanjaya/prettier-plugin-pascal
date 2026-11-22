@@ -1,4 +1,1 @@
-program ExceptionHandlerTest;
-begin
-  try x := 1; except on E: Exception do raise E; end;
-end.
+program ExceptionHandlerTest; {$mode objfpc} uses SysUtils; var x: Integer; begin try x := 1; except on E: Exception do raise E; end; end.

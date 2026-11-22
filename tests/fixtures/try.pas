@@ -1,4 +1,1 @@
-program TryTest;
-begin
-  try x := 1; finally x := 2; end;
-end.
+program TryTest; {$mode objfpc}{$H+} var x: Integer; begin try x := 1; finally x := 2; end; end.

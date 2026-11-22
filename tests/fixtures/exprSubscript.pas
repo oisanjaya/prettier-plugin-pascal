@@ -1,5 +1,1 @@
-program ExprSubscriptTest;
-var x, i: Integer;
-begin
-  x := values[i];
-end.
+program ExprSubscriptTest; var x, i: Integer; values: array of Integer; begin x := values [i]; end.

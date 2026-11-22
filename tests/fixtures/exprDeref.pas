@@ -1,5 +1,1 @@
-program ExprDerefAliasTest;
-var p, x: Integer;
-begin
-  x := p^;
-end.
+program ExprDerefAliasTest; type PInteger = ^Integer; var p: PInteger; x: Integer; begin p := @x; x := p^; end.

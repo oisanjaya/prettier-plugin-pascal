@@ -1,4 +1,1 @@
-program StatementTest;
-begin
-  DoSomething;
-end.
+program StatementTest; procedure DoSomething; begin end; begin DoSomething; end.

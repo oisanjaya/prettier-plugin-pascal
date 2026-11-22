@@ -1,1 +1,1 @@
-type Foo.Bar = Integer;
+program GenericDot; type TFoo = record Bar: Integer; end; var x: TFoo; begin x.Bar := 1; end.

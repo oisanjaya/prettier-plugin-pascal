@@ -1,4 +1,4 @@
-unit ProcExternalTest;
+unit ProcExternal;
 interface
 procedure Foo; external 'foo';
 implementation

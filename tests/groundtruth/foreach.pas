@@ -1,4 +1,10 @@
 program ForeachTest;
+procedure use(A: Integer);
+begin
+end;
+var
+  item: Integer;
+  items: array of Integer;
 begin
   for item in items do use(item);
 end.

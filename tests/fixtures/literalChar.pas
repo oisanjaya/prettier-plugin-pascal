@@ -1,4 +1,1 @@
-program LiteralCharTest;
-begin
-  WriteLn(#65);
-end.
+program LiteralCharTest; begin WriteLn(#65); end.

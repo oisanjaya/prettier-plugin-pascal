@@ -1,6 +1,6 @@
 program ExprBinaryTest;
 var
-  x: Integer;
+  x, a, b, c: Integer;
 begin
   x := a + b * c;
 end.

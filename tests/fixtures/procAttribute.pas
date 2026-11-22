@@ -1,5 +1,1 @@
-unit ProcAttributeTest;
-interface
-procedure Foo; inline;
-implementation
-end.
+unit ProcAttribute; interface procedure Foo; inline; implementation procedure Foo; begin end; end.

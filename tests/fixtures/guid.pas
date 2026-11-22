@@ -1,2 +1,1 @@
-type
-  IThing = interface [TGuid] end;
+program GuidTest; {$mode delphi} type IThing = interface ['{00000000-0000-0000-0000-000000000000}'] end; begin end.

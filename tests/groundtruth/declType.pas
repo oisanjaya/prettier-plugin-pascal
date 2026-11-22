@@ -1,2 +1,5 @@
+program DeclType;
 type
   T = Integer;
+begin
+end.

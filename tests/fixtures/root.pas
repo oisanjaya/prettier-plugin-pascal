@@ -1,3 +1,1 @@
-program RootTest;
-begin
-end.
+program RootTest; begin end.

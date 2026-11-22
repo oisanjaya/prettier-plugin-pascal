@@ -1,4 +1,8 @@
 program TryTest;
+{$mode objfpc}
+{$H+}
+var
+  x: Integer;
 begin
   try
     x := 1;

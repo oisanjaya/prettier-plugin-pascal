@@ -1,7 +1,1 @@
-program DefProcTest;
-procedure Foo;
-begin
-  x := 1;
-end;
-begin
-end.
+program DefProcTest; var x: Integer; procedure Foo; begin x := 1; end; begin end.

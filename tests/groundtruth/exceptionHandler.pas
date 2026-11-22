@@ -1,4 +1,9 @@
 program ExceptionHandlerTest;
+{$mode objfpc}
+uses
+  SysUtils;
+var
+  x: Integer;
 begin
   try
     x := 1;

@@ -1,4 +1,6 @@
 program StringContentTest;
+var
+  x: string;
 begin
   x := '''hello world''';
 end.

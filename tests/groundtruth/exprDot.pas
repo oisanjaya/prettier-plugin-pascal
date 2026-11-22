@@ -1,5 +1,10 @@
 program ExprDotTest;
+type
+  TObj = record
+      value: Integer;
+    end;
 var
+  obj: TObj;
   x: Integer;
 begin
   x := obj.value;

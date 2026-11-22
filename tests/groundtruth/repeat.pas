@@ -1,4 +1,6 @@
 program RepeatTest;
+var
+  x: Integer;
 begin
   repeat
     x := x + 1;

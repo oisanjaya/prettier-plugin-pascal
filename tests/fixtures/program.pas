@@ -1,3 +1,1 @@
-program ProgramTest;
-begin
-end.
+program ProgramTest; begin end.

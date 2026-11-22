@@ -1,4 +1,1 @@
-program LiteralStringTest;
-begin
-  WriteLn('hello');
-end.
+program LiteralStringTest; begin WriteLn('hello'); end.

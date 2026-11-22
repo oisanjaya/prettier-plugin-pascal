@@ -1,4 +1,7 @@
 program StatementTest;
+procedure DoSomething;
+begin
+end;
 begin
   DoSomething;
 end.

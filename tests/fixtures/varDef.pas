@@ -1,4 +1,1 @@
-program VarDefTest;
-begin
-  var x: Integer;
-end.
+program VarDefTest; var x: Integer; begin end.

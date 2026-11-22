@@ -1,6 +1,9 @@
 program ExprAsAliasTest;
+{$mode objfpc}
+{$H+}
 var
-  x: Integer;
+  value: TObject;
+  x: TObject;
 begin
-  x := value as Integer;
+  x := value as TObject;
 end.

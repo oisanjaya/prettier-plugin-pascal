@@ -1,6 +1,6 @@
 program ForTest;
 var
-  i: Integer;
+  x, i: Integer;
 begin
   for i := 1 to 10 do x := i;
 end.

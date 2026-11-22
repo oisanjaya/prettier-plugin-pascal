@@ -1,6 +1,1 @@
-program GotoTest;
-begin
-  goto L1;
-L1:
-writeln;
-end.
+program GotoTest; {$goto on} label L1; begin goto L1; L1: writeln; end.

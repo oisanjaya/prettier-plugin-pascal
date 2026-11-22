@@ -1,4 +1,1 @@
-program TyperefPtrTest;
-var x: ^Integer;
-begin
-end.
+program TyperefPtrTest; var x: ^Integer; begin end.

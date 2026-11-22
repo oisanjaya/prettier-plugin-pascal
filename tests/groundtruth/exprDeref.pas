@@ -1,6 +1,10 @@
 program ExprDerefAliasTest;
+type
+  PInteger = ^Integer;
 var
-  p, x: Integer;
+  p: PInteger;
+  x: Integer;
 begin
+  p := @x;
   x := p^;
 end.

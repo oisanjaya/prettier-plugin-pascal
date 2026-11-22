@@ -1,4 +1,6 @@
 program DefProcTest;
+var
+  x: Integer;
 procedure Foo;
 begin
   x := 1;

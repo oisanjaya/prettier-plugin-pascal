@@ -3,6 +3,6 @@ var
   x: Integer;
 begin
   case x of
-    1..3: ;
+    1..3: writeln;
   end;
 end.

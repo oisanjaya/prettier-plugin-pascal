@@ -1,6 +1,11 @@
 program ExprTplTest;
-var
-  x: specialize TObjectList<integer>;
+{$mode objfpc}
+generic function Foo<T>(A: T): T;
 begin
-  x := Foo<Integer>;
+  Result := A;
+end;
+var
+  x: Integer;
+begin
+  x := specialize Foo<Integer>(1);
 end.

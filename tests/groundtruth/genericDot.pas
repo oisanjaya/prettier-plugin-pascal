@@ -1,2 +1,10 @@
+program GenericDot;
 type
-  Foo.Bar = Integer;
+  TFoo = record
+      Bar: Integer;
+    end;
+var
+  x: TFoo;
+begin
+  x.Bar := 1;
+end.

@@ -1,5 +1,1 @@
-program ExprParensTest;
-var x: Integer;
-begin
-  x := (value);
-end.
+program ExprParensTest; var value, x: Integer; begin x := (value); end.

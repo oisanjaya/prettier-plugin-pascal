@@ -1,2 +1,5 @@
+program DeclFile;
 type
   TFile = file of Integer;
+begin
+end.

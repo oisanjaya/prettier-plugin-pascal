@@ -1,5 +1,10 @@
 program TyperefTplTest;
+{$mode objfpc}
+type
+  generic TList<T> = record
+      Item: T;
+    end;
 var
-  x: TList<Integer>;
+  x: specialize TList<Integer>;
 begin
 end.

@@ -1,4 +1,1 @@
-program VarAssignDefTest;
-begin
-  var x: Integer := 1;
-end.
+program VarAssignDefTest; var x: Integer; begin x := 1; end.

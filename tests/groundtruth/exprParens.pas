@@ -1,6 +1,6 @@
 program ExprParensTest;
 var
-  x: Integer;
+  value, x: Integer;
 begin
   x := (value);
 end.

@@ -1,4 +1,1 @@
-program TypeTest;
-var x: Integer;
-begin
-end.
+program TypeTest; var x: Integer; begin end.

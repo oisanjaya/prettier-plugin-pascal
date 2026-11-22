@@ -1,2 +1,5 @@
+program DeclSet;
 type
-  TSet = set of Integer;
+  TSet = set of 0..255;
+begin
+end.

@@ -1,5 +1,1 @@
-program ExprAsAliasTest;
-var x: Integer;
-begin
-  x := value as Integer;
-end.
+program ExprAsAliasTest; {$mode objfpc}{$H+} var value: TObject; x: TObject; begin x := value as TObject; end.
